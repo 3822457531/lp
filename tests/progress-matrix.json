@@ -1,0 +1,380 @@
+{
+  "routes": [
+    {
+      "method": "POST",
+      "path": "/api/auth/login"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/register"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/me"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/auth/password"
+    },
+    {
+      "method": "GET",
+      "path": "/api/stores"
+    },
+    {
+      "method": "GET",
+      "path": "/api/public/stores"
+    },
+    {
+      "method": "GET",
+      "path": "/api/dashboard"
+    },
+    {
+      "method": "GET",
+      "path": "/api/customers"
+    },
+    {
+      "method": "GET",
+      "path": "/api/customers/:id"
+    },
+    {
+      "method": "POST",
+      "path": "/api/customers"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/customers/:id"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/customers/:id"
+    },
+    {
+      "method": "GET",
+      "path": "/api/users"
+    },
+    {
+      "method": "GET",
+      "path": "/api/users/:id"
+    },
+    {
+      "method": "POST",
+      "path": "/api/users"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/users/:id"
+    },
+    {
+      "method": "GET",
+      "path": "/api/audits"
+    },
+    {
+      "method": "POST",
+      "path": "/api/audits/:id/approve"
+    },
+    {
+      "method": "POST",
+      "path": "/api/audits/:id/reject"
+    },
+    {
+      "method": "GET",
+      "path": "/api/projects"
+    },
+    {
+      "method": "POST",
+      "path": "/api/projects"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/projects/:id"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/projects/:id"
+    },
+    {
+      "method": "GET",
+      "path": "/api/cards"
+    },
+    {
+      "method": "POST",
+      "path": "/api/cards"
+    },
+    {
+      "method": "GET",
+      "path": "/api/verifications"
+    },
+    {
+      "method": "POST",
+      "path": "/api/verifications/draft"
+    },
+    {
+      "method": "GET",
+      "path": "/api/verifications/:id"
+    },
+    {
+      "method": "POST",
+      "path": "/api/verifications/:id/confirm"
+    },
+    {
+      "method": "POST",
+      "path": "/api/verifications/:id/cancel"
+    },
+    {
+      "method": "POST",
+      "path": "/api/verifications/:id/refund"
+    },
+    {
+      "method": "GET",
+      "path": "/api/public/verification/:token"
+    },
+    {
+      "method": "GET",
+      "path": "/api/appointments"
+    },
+    {
+      "method": "POST",
+      "path": "/api/appointments"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/appointments/:id"
+    },
+    {
+      "method": "POST",
+      "path": "/api/appointments/:id/status"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/appointments/:id"
+    },
+    {
+      "method": "GET",
+      "path": "/api/inventory/items"
+    },
+    {
+      "method": "POST",
+      "path": "/api/inventory/items"
+    },
+    {
+      "method": "GET",
+      "path": "/api/inventory/stock"
+    },
+    {
+      "method": "GET",
+      "path": "/api/inventory/orders"
+    },
+    {
+      "method": "POST",
+      "path": "/api/inventory/orders"
+    },
+    {
+      "method": "POST",
+      "path": "/api/inventory/orders/:id/ship"
+    },
+    {
+      "method": "POST",
+      "path": "/api/inventory/orders/:id/receive"
+    },
+    {
+      "method": "POST",
+      "path": "/api/inventory/orders/:id/cancel"
+    },
+    {
+      "method": "GET",
+      "path": "/api/assessments"
+    },
+    {
+      "method": "POST",
+      "path": "/api/assessments"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/assessments/:id"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/assessments/:id"
+    },
+    {
+      "method": "GET",
+      "path": "/api/assessments/result"
+    },
+    {
+      "method": "GET",
+      "path": "/api/salary/rules"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/salary/rules/:id"
+    },
+    {
+      "method": "POST",
+      "path": "/api/salary/compute"
+    },
+    {
+      "method": "GET",
+      "path": "/api/salary/records"
+    },
+    {
+      "method": "POST",
+      "path": "/api/salary/records/:id/status"
+    },
+    {
+      "method": "GET",
+      "path": "/api/welfare"
+    },
+    {
+      "method": "POST",
+      "path": "/api/welfare"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/welfare/:id"
+    },
+    {
+      "method": "POST",
+      "path": "/api/welfare/:id/issue"
+    },
+    {
+      "method": "GET",
+      "path": "/api/welfare/issued"
+    },
+    {
+      "method": "GET",
+      "path": "/api/attendance"
+    },
+    {
+      "method": "POST",
+      "path": "/api/attendance/check"
+    },
+    {
+      "method": "GET",
+      "path": "/api/attendance/today"
+    },
+    {
+      "method": "GET",
+      "path": "/api/settings"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/settings"
+    },
+    {
+      "method": "GET",
+      "path": "/api/sms/logs"
+    },
+    {
+      "method": "POST",
+      "path": "/api/sms/send"
+    },
+    {
+      "method": "GET",
+      "path": "/api/customers/birthday/upcoming"
+    },
+    {
+      "method": "GET",
+      "path": "/api/messages"
+    },
+    {
+      "method": "GET",
+      "path": "/api/workbench"
+    }
+  ],
+  "uniq": [
+    "DEL /api/appointments/",
+    "DEL /api/assessments/",
+    "DEL /api/welfare/",
+    "GET /api/appointments",
+    "GET /api/assessments",
+    "GET /api/assessments/result",
+    "GET /api/attendance",
+    "GET /api/attendance/today",
+    "GET /api/audits",
+    "GET /api/auth/me",
+    "GET /api/cards",
+    "GET /api/customer/me",
+    "GET /api/customers",
+    "GET /api/customers/",
+    "GET /api/customers/birthday/upcoming",
+    "GET /api/dashboard",
+    "GET /api/inventory/items",
+    "GET /api/inventory/orders",
+    "GET /api/inventory/stock",
+    "GET /api/messages",
+    "GET /api/projects",
+    "GET /api/public/stores",
+    "GET /api/public/verification/",
+    "GET /api/salary/records",
+    "GET /api/settings",
+    "GET /api/sms/logs",
+    "GET /api/stores",
+    "GET /api/users",
+    "GET /api/users/",
+    "GET /api/verifications",
+    "GET /api/verifications/",
+    "GET /api/welfare",
+    "GET /api/welfare/issued",
+    "GET /api/workbench",
+    "POST /api/appointments",
+    "POST /api/appointments/",
+    "POST /api/assessments",
+    "POST /api/attendance/check",
+    "POST /api/audits/",
+    "POST /api/auth/login",
+    "POST /api/auth/register",
+    "POST /api/cards",
+    "POST /api/customers",
+    "POST /api/inventory/orders",
+    "POST /api/inventory/orders/",
+    "POST /api/projects",
+    "POST /api/users",
+    "POST /api/verifications/",
+    "POST /api/verifications/draft",
+    "POST /api/welfare",
+    "POST /api/welfare/",
+    "PUT /api/appointments/",
+    "PUT /api/assessments/",
+    "PUT /api/audits/",
+    "PUT /api/customers/",
+    "PUT /api/projects/",
+    "PUT /api/salary/records/",
+    "PUT /api/settings",
+    "PUT /api/users/",
+    "PUT /api/verifications/",
+    "PUT /api/welfare/"
+  ],
+  "miss": [
+    "DEL /api/appointments/",
+    "DEL /api/assessments/",
+    "DEL /api/welfare/",
+    "GET /api/customer/me",
+    "GET /api/customers/",
+    "GET /api/public/verification/",
+    "GET /api/users/",
+    "GET /api/verifications/",
+    "POST /api/appointments/",
+    "POST /api/audits/",
+    "POST /api/inventory/orders/",
+    "POST /api/verifications/",
+    "POST /api/welfare/",
+    "PUT /api/appointments/",
+    "PUT /api/assessments/",
+    "PUT /api/audits/",
+    "PUT /api/customers/",
+    "PUT /api/projects/",
+    "PUT /api/salary/records/",
+    "PUT /api/users/",
+    "PUT /api/verifications/",
+    "PUT /api/welfare/"
+  ],
+  "pageCount": {
+    "admin": 60,
+    "assets": 3,
+    "customer": 1,
+    "customer-v2": 14,
+    "manager": 40,
+    "register.html": 1,
+    "staff": 35
+  }
+}

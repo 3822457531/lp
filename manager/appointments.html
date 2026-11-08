@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>预约列表 · 兰瓶美业</title>
+  <link rel="stylesheet" href="../css/mobile-app.css" />
+  <link rel="stylesheet" href="../assets/css/lp-app.css" />
+  <style>
+    .date-row { display: flex; align-items: center; gap: 10px; margin: 0 14px 10px; }
+    .date-row input { flex: 1; height: 40px; border: 1px solid var(--border); border-radius: 10px; padding: 0 10px; font-size: 13px; background: #fff; color: var(--text); }
+    .date-row button { height: 40px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--pink); background: #fff; color: var(--pink); font-size: 13px; }
+    .list-card .info p { margin: 2px 0; word-break: break-word; }
+    .list-card .info p strong { color: var(--text); font-weight: 600; }
+    .list-card .info h4 b { font-size: 16px; color: var(--pink); }
+    .list-card .actions { flex-wrap: wrap; }
+    .list-card .actions .btn-sm { min-height: 34px; line-height: 32px; padding: 0 14px; }
+    .pick-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; font-size: 14px; min-height: 44px; }
+    .pick-row button { border: none; background: var(--pink); color: #fff; border-radius: 8px; padding: 0 12px; height: 30px; font-size: 12px; }
+    .pick-item { padding: 10px 6px; border-bottom: 1px solid var(--border); font-size: 13px; cursor: pointer; }
+    .pick-item:active { background: #faf3f5; }
+    .pick-item .s { color: var(--text-2); font-size: 12px; margin-top: 3px; }
+  </style>
+<link rel="stylesheet" href="../assets/css/polish-mobile.css" />
+</head>
+<body>
+  <div class="phone-page">
+    <div class="phone">
+      <div class="status-bar" style="background:#f8a0b4;color:#fff;"><span>9:41</span><span>兰瓶</span><span>●●●</span></div>
+      <div class="phone-body">
+        <div class="nav-bar">
+          <a class="back" href="home.html">‹</a>
+          <h1>预约列表</h1>
+          <span class="right" id="addBtn">+ 新建</span>
+        </div>
+
+        <div class="date-row">
+          <input type="date" id="date" />
+          <button id="allDay">全部日期</button>
+        </div>
+
+        <div class="tabs-row" id="statusTabs">
+          <span class="active" data-status="">全部</span>
+          <span data-status="待确认">待确认</span>
+          <span data-status="已确认">已确认</span>
+          <span data-status="已完成">已完成</span>
+          <span data-status="已取消">已取消</span>
+        </div>
+
+        <div class="section-hd">预约 <span id="countHint">—</span></div>
+        <div id="list" style="padding-bottom:8px;"></div>
+      </div>
+
+      <nav class="tab-bar">
+        <a href="home.html"><span class="dot"></span>首页</a>
+        <a href="customers.html"><span class="dot"></span>客户</a>
+        <a href="verify.html"><span class="dot"></span>核销</a>
+        <a href="mine.html"><span class="dot"></span>我的</a>
+      </nav>
+    </div>
+  </div>
+
+  <script src="../assets/js/lp-api.js"></script>
+  <script src="../assets/js/lp-mock.js?v=47"></script>
+  <script>
+    (function () {
+      'use strict';
+      var me = null;
+      var status = '';
+      var useDate = true;
+      var raw = [];
+      var listEl = document.getElementById('list');
+      var dateEl = document.getElementById('date');
+
+      function hm(s) { return s ? String(s).slice(11, 16) : '—'; }
+
+      function cardHtml(a) {
+        var acts = [];
+        if (a.status === '待确认') {
+          acts.push('<button class="btn-sm solid" data-st="' + a.id + '|已确认">确认</button>');
+          acts.push('<button class="btn-sm ghost danger" data-st="' + a.id + '|已取消">取消</button>');
+        } else if (a.status === '已确认') {
+          acts.push('<button class="btn-sm solid" data-st="' + a.id + '|已完成">完成</button>');
+          acts.push('<button class="btn-sm outline" data-st="' + a.id + '|已改约">改约</button>');
+          acts.push('<button class="btn-sm ghost danger" data-st="' + a.id + '|已取消">取消</button>');
+        }
+        if (a.status !== '已完成') acts.push('<button class="btn-sm ghost" data-del="' + a.id + '">删除</button>');
+        return '<div class="list-card">' +
+          '<div class="info"><h4><b>' + LP.esc(hm(a.start_time)) + '</b>' + LP.esc(LP.fmt.date(a.start_time)) + LP.tag(a.status || '') + '</h4>' +
+          '<p><strong>' + LP.esc(a.customer_name || '—') + '</strong> · ' + LP.esc(LP.fmt.phone(a.customer_phone)) + '</p>' +
+          '<p>项目：' + LP.esc(a.project_name || '—') + (a.project_price ? '（' + LP.esc(LP.fmt.money(a.project_price)) + '）' : '') + '</p>' +
+          '<p>员工：' + LP.esc(a.staff_name || '—') + ' · 时长 ' + LP.esc((a.duration || 60) + ' 分钟') + '</p>' +
+          '<p>' + (a.channel ? '渠道 ' + LP.esc(a.channel) : '预约 ' + LP.esc(LP.fmt.datetime(a.start_time))) + '</p>' +
+          (a.remark ? '<p>备注：' + LP.esc(a.remark) + '</p>' : '') +
+          '</div><div class="actions">' + acts.join('') + '</div></div>';
+      }
+
+      function paint() {
+        document.getElementById('countHint').textContent = raw.length + ' 条';
+        if (!raw.length) { listEl.innerHTML = LP.empty('该条件暂无预约'); return; }
+        listEl.innerHTML = raw.map(cardHtml).join('');
+      }
+
+      function load() {
+        listEl.innerHTML = LP.skeleton(3);
+        var qs = {};
+        if (useDate && dateEl.value) qs.date = dateEl.value;
+        if (status) qs.status = status;
+        LP.get('/api/appointments', qs).then(function (arr) {
+          raw = arr || [];
+          paint();
+        }).catch(function (e) {
+          listEl.innerHTML = LP.empty('预约加载失败', '⚠');
+          LP.toast(e.message || '加载失败', 'error');
+        });
+      }
+
+      function pickCustomer() {
+        return new Promise(function (resolve) {
+          var settled = false;
+          function done(v) { if (!settled) { settled = true; resolve(v); } }
+          var m = LP.modal({
+            title: '选择客户', width: 560, footer: null,
+            body: '<div style="padding-bottom:10px"><div class="search-box"><input id="cq" type="search" placeholder="搜索姓名 / 手机号" /></div></div>' +
+              '<div id="clist" style="max-height:52vh;overflow:auto"><div class="lp-skeleton"><div></div><div></div></div></div>',
+            onClose: function () { done(null); }
+          });
+          function fetchList(q) {
+            LP.get('/api/customers', { q: q || '' }).then(function (d) {
+              var items = (d && d.list) || [];
+              var box = m.body.querySelector('#clist');
+              if (!items.length) { box.innerHTML = LP.empty('未找到客户'); return; }
+              box.innerHTML = items.map(function (c) {
+                return '<div class="pick-item" data-id="' + c.id + '"><b>' + LP.esc(c.name || '—') + '</b>' +
+                  '<div class="s">' + LP.esc(LP.fmt.phone(c.phone)) + '</div></div>';
+              }).join('');
+            }).catch(function (e) { LP.toast(e.message, 'error'); });
+          }
+          m.body.querySelector('#cq').addEventListener('input', LP.debounce(function (e) { fetchList(e.target.value.trim()); }, 300));
+          m.body.querySelector('#clist').addEventListener('click', function (e) {
+            var it = e.target.closest('.pick-item');
+            if (!it) return;
+            done({ id: it.getAttribute('data-id'), name: it.querySelector('b').textContent });
+            m.close();
+          });
+          fetchList('');
+        });
+      }
+
+      function openCreate() {
+        Promise.all([LP.get('/api/projects').catch(function () { return []; }), LP.get('/api/users').catch(function () { return []; })])
+          .then(function (r) {
+            var projects = r[0] || [];
+            var staff = r[1] || [];
+            pickCustomer().then(function (cust) {
+              if (!cust) return;
+              var now = new Date();
+              var pad = function (n) { return String(n).padStart(2, '0'); };
+              var def = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate()) + 'T' + pad(now.getHours() + 1) + ':00';
+              LP.modal({
+                title: '新建预约 · ' + cust.name,
+                okText: '提交预约',
+                width: 560,
+                body: '<div class="lp-form">' +
+                  '<div class="lp-form-item"><label>客户</label><div class="pick-row"><span>' + LP.esc(cust.name) + '</span><button data-pick>重选</button></div></div>' +
+                  '<div class="lp-form-item"><label>项目</label><select class="lp-field" name="pj">' +
+                  '<option value="">不指定</option>' +
+                  projects.map(function (p) { return '<option value="' + p.id + '">' + LP.esc(p.name) + '</option>'; }).join('') +
+                  '</select></div>' +
+                  '<div class="lp-form-item"><label>员工</label><select class="lp-field" name="staff">' +
+                  '<option value="">不指定</option>' +
+                  staff.map(function (s) { return '<option value="' + s.id + '">' + LP.esc(s.name + (s.position ? ' · ' + s.position : '')) + '</option>'; }).join('') +
+                  '</select></div>' +
+                  '<div class="lp-form-item"><label>预约时间 <em>*</em></label><input class="lp-field" type="datetime-local" name="start" value="' + def + '" /></div>' +
+                  '<div class="lp-form-item full"><label>备注</label><input class="lp-field" type="text" name="remark" placeholder="客户需求等" /></div>' +
+                  '</div>',
+                onMount: function (api) {
+                  api.body.querySelector('[data-pick]').addEventListener('click', function () {
+                    pickCustomer().then(function (c2) {
+                      if (c2) { cust = c2; api.body.querySelector('.pick-row span').textContent = c2.name; }
+                    });
+                  });
+                },
+                onOk: function (api) {
+                  var start = api.body.querySelector('[name=start]').value;
+                  var pj = api.body.querySelector('[name=pj]').value;
+                  var st = api.body.querySelector('[name=staff]').value;
+                  var remark = api.body.querySelector('[name=remark]').value.trim();
+                  if (!start) return LP.toast('请选择预约时间', 'error');
+                  api.setLoading(true, '提交中…');
+                  LP.post('/api/appointments', {
+                    customer_id: Number(cust.id),
+                    start_time: start.replace('T', ' '),
+                    staff_id: st ? Number(st) : undefined,
+                    project_id: pj ? Number(pj) : undefined,
+                    remark: remark
+                  }).then(function () {
+                    api.close();
+                    LP.toast('预约已创建', 'success');
+                    load();
+                  }).catch(function (e) { api.setLoading(false); LP.toast(e.message || '提交失败', 'error'); });
+                }
+              });
+            });
+          });
+      }
+
+      function setStatus(id, st) {
+        var label = ({ '已确认': '确认该预约', '已完成': '标记完成', '已取消': '取消该预约', '已改约': '标记改约' })[st] || '更新状态';
+        LP.confirm(label + '？', { okText: '确定' }).then(function (ok) {
+          if (!ok) return;
+          LP.post('/api/appointments/' + id + '/status', { status: st }).then(function () {
+            LP.toast('已更新为「' + st + '」', 'success');
+            load();
+          }).catch(function (e) { LP.toast(e.message || '更新失败', 'error'); });
+        });
+      }
+
+      function del(id) {
+        LP.confirm('删除后不可恢复，确认删除该预约？', { okText: '删除', danger: true }).then(function (ok) {
+          if (!ok) return;
+          LP.del('/api/appointments/' + id).then(function () {
+            LP.toast('已删除', 'success');
+            load();
+          }).catch(function (e) { LP.toast(e.message || '删除失败', 'error'); });
+        });
+      }
+
+      listEl.addEventListener('click', function (e) {
+        var s = e.target.closest('[data-st]');
+        var d = e.target.closest('[data-del]');
+        if (s) {
+          var p = s.getAttribute('data-st').split('|');
+          setStatus(p[0], p[1]);
+        } else if (d) del(d.getAttribute('data-del'));
+      });
+
+      document.getElementById('statusTabs').addEventListener('click', function (e) {
+        var s = e.target.closest('span[data-status]');
+        if (!s) return;
+        LP.$$('#statusTabs span').forEach(function (x) { x.classList.remove('active'); });
+        s.classList.add('active');
+        status = s.getAttribute('data-status') || '';
+        load();
+      });
+
+      document.getElementById('allDay').addEventListener('click', function () {
+        useDate = !useDate;
+        this.style.background = useDate ? '#fff' : 'var(--pink)';
+        this.style.color = useDate ? 'var(--pink)' : '#fff';
+        load();
+      });
+
+      dateEl.addEventListener('change', function () { useDate = true; load(); });
+      document.getElementById('addBtn').addEventListener('click', openCreate);
+
+      LP.requireRoles(['manager']).then(function (u) {
+        me = u;
+        dateEl.value = LP.today();
+        load();
+      }).catch(function () {});
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>服务核销 · 兰瓶美业</title>
+  <link rel="stylesheet" href="../css/mobile-app.css" />
+  <link rel="stylesheet" href="../assets/css/lp-app.css" />
+  <link rel="stylesheet" href="staff.css" />
+<link rel="stylesheet" href="../assets/css/polish-mobile.css" />
+</head>
+<body class="sticky">
+  <div class="phone-page">
+    <div class="phone">
+      <div class="status-bar"><span>9:41</span><span>●●●</span></div>
+      <div class="phone-body" id="body">
+        <div class="steps">
+          <div class="s active" id="s1"><span class="num">1</span>选择项目</div>
+          <div class="s" id="s2"><span class="num">2</span>发送核销码</div>
+          <div class="s" id="s3"><span class="num">3</span>扫码核销</div>
+        </div>
+
+        <div class="search-row" id="searchRow">
+          <div class="search-box">
+            <input id="kw" type="search" placeholder="搜索客户姓名 / 手机号" autocomplete="off" />
+          </div>
+        </div>
+        <div id="custList"></div>
+
+        <div id="picked"></div>
+        <div id="cardWrap"></div>
+        <div class="pad-bottom"></div>
+      </div>
+
+      <div class="sticky-bar st-hide" id="bar">
+        <div class="sum">
+          <span id="sumTimes">共 0 次</span>
+          <b id="sumAmt">¥0</b>
+        </div>
+        <button class="btn-pill" id="nextBtn">下一步</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../assets/js/lp-api.js"></script>
+  <script src="../assets/js/lp-mock.js?v=47"></script>
+  <script src="staff.js"></script>
+  <script>
+    (function () {
+      'use strict';
+      var state = { cust: null, cards: [], sel: {}, busy: false };
+
+      STAFF.guard().then(function () {
+        STAFF.mountTab('verify');
+        bind();
+        var pre = LP.param('customer_id');
+        if (pre) pick(Number(pre));
+        else loadCustomers('');
+      }).catch(function () { });
+
+      function bind() {
+        var timer = null;
+        LP.$('#kw').addEventListener('input', function () {
+          var v = this.value.trim();
+          clearTimeout(timer);
+          timer = setTimeout(function () { loadCustomers(v); }, 320);
+        });
+
+        LP.on('#custList', 'click', '.row', function (e) {
+          if (e.target.closest('[data-verify]')) return;
+          pick(Number(this.getAttribute('data-cust')));
+        });
+        LP.on('#picked', 'click', '[data-swap]', function () {
+          state.cust = null; state.cards = []; state.sel = {};
+          LP.mount('#picked', '');
+          LP.mount('#cardWrap', '');
+          LP.$('#searchRow').classList.remove('st-hide');
+          updateBar();
+        });
+        LP.on('#cardWrap', 'click', '.check-item', function (e) {
+          var id = this.getAttribute('data-card');
+          var op = e.target.closest('[data-op]');
+          if (op) { step(id, op.getAttribute('data-op') === 'plus' ? 1 : -1); return; }
+          toggle(id);
+        });
+        LP.$('#nextBtn').addEventListener('click', submit);
+      }
+
+      /* ---------- 客户列表 ---------- */
+      function loadCustomers(q) {
+        LP.mount('#custList', '<div class="st-load">加载客户…</div>');
+        LP.get('/api/customers', { q: q || '' }).then(function (d) {
+          var list = (d && d.list) || [];
+          if (!list.length) {
+            LP.mount('#custList', STAFF.empty('没有匹配的客户', '👤'));
+            return;
+          }
+          var html = '<div class="list-card">';
+          for (var i = 0; i < list.length; i++) {
+            var c = list[i];
+            html += '<div class="row" data-cust="' + c.id + '">' +
+              '<div class="av">' + (c.avatar ? '<img src="' + STAFF.esc(STAFF.img(c.avatar)) + '" alt="" />' : STAFF.esc(String(c.name || '客').slice(-1))) + '</div>' +
+              '<div class="info"><h4>' + STAFF.esc(c.name || '—') +
+              (c.level ? '<span class="tag tag-pink" style="margin-left:6px;">' + STAFF.esc(c.level) + '</span>' : '') + '</h4>' +
+              '<p>' + LP.fmt.phone(c.phone) + ' · 有效卡项 ' + (c.active_cards || 0) + '</p></div>' +
+              '<div class="row-acts"><span class="st-muted">选择 ›</span></div>' +
+              '</div>';
+          }
+          html += '</div>';
+          LP.mount('#custList', html);
+        }).catch(function (e) {
+          LP.mount('#custList', '<div class="st-err">' + STAFF.esc(e.message) + '</div>');
+        });
+      }
+
+      /* ---------- 选中客户 → 卡项 ---------- */
+      function pick(id) {
+        LP.mount('#custList', '<div class="st-load">读取客户卡项…</div>');
+        LP.get('/api/customers/' + id).then(function (c) {
+          state.cust = c;
+          state.cards = c.cards || [];
+          state.sel = {};
+          LP.$('#searchRow').classList.add('st-hide');
+          LP.mount('#custList', '');
+          renderPicked();
+          renderCards();
+          updateBar();
+        }).catch(function (e) {
+          LP.mount('#custList', '<div class="st-err">' + STAFF.esc(e.message) + '</div>');
+        });
+      }
+
+      function renderPicked() {
+        var c = state.cust;
+        LP.mount('#picked',
+          '<div class="picked-card">' +
+          '<div class="av">' + (c.avatar ? '<img src="' + STAFF.esc(STAFF.img(c.avatar)) + '" alt="" />' : STAFF.esc(String(c.name || '客').slice(-1))) + '</div>' +
+          '<div class="info"><h4>' + STAFF.esc(c.name || '—') +
+          (c.level ? '<span class="tag tag-pink" style="margin-left:6px;">' + STAFF.esc(c.level) + '</span>' : '') + '</h4>' +
+          '<p>' + LP.fmt.phone(c.phone) + ' · 到店 ' + (c.visit_count || 0) + ' 次</p></div>' +
+          '<span class="swap" data-swap="1">更换</span>' +
+          '</div>');
+      }
+
+      function availCards() {
+        return state.cards.filter(function (c) {
+          return c.status === '有效' && STAFF.left(c) > 0;
+        });
+      }
+
+      function findCard(id) {
+        for (var i = 0; i < state.cards.length; i++) {
+          if (String(state.cards[i].id) === String(id)) return state.cards[i];
+        }
+        return null;
+      }
+
+      function renderCards() {
+        var cards = availCards();
+        if (!cards.length) {
+          LP.mount('#cardWrap', '<div class="section-hd">可核销卡项</div>' +
+            STAFF.empty('该客户暂无可核销的卡项', '💳'));
+          return;
+        }
+        var html = '<div class="section-hd">可核销卡项（' + cards.length + '）</div>' +
+          '<div class="list-card" style="padding:0 14px;">';
+        for (var i = 0; i < cards.length; i++) {
+          var c = cards[i];
+          var times = state.sel[c.id] || 0;
+          var left = STAFF.left(c);
+          html += '<div class="check-item" data-card="' + c.id + '">' +
+            '<span class="check-box ' + (times > 0 ? 'on' : '') + '"></span>' +
+            '<div class="info"><h4>' + STAFF.esc(c.project_name || '卡项') + '</h4>' +
+            '<p>剩余 ' + left + ' 次 · 单价 ' + STAFF.money(STAFF.unit(c)) +
+            (c.expire_at ? ' · 到期 ' + LP.fmt.date(c.expire_at) : '') + '</p></div>' +
+            '<div class="stepper">' +
+            '<button data-op="minus" data-card="' + c.id + '"' + (times <= 0 ? ' disabled' : '') + '>−</button>' +
+            '<span class="n">' + times + '</span>' +
+            '<button data-op="plus" data-card="' + c.id + '"' + (times >= left ? ' disabled' : '') + '>+</button>' +
+            '</div></div>';
+        }
+        html += '</div>';
+        LP.mount('#cardWrap', html);
+      }
+
+      function toggle(id) {
+        var card = findCard(id);
+        if (!card) return;
+        if (state.sel[id]) delete state.sel[id];
+        else {
+          if (STAFF.left(card) <= 0) { LP.toast('该卡项剩余次数不足', 'error'); return; }
+          state.sel[id] = 1;
+        }
+        renderCards(); updateBar();
+      }
+
+      function step(id, delta) {
+        var card = findCard(id);
+        if (!card) return;
+        var left = STAFF.left(card);
+        var n = (state.sel[id] || 0) + delta;
+        if (n < 0) n = 0;
+        if (n > left) {
+          n = left;
+          if (delta > 0) LP.toast('最多可核销 ' + left + ' 次', 'error');
+        }
+        if (n === 0) delete state.sel[id];
+        else state.sel[id] = n;
+        renderCards(); updateBar();
+      }
+
+      function totals() {
+        var t = 0, amt = 0;
+        for (var k in state.sel) {
+          if (!Object.prototype.hasOwnProperty.call(state.sel, k)) continue;
+          var c = findCard(k);
+          t += state.sel[k];
+          if (c) amt += STAFF.unit(c) * state.sel[k];
+        }
+        return { times: t, amount: amt };
+      }
+
+      function updateBar() {
+        var bar = LP.$('#bar');
+        if (!state.cust) { bar.classList.add('st-hide'); return; }
+        bar.classList.remove('st-hide');
+        var t = totals();
+        LP.$('#sumTimes').textContent = '共 ' + t.times + ' 次';
+        LP.$('#sumAmt').textContent = STAFF.money(t.amount);
+        LP.$('#nextBtn').disabled = t.times === 0;
+      }
+
+      /* ---------- 生成核销单 ---------- */
+      function submit() {
+        if (state.busy) return;
+        if (!state.cust) { LP.toast('请先选择客户', 'error'); return; }
+        var items = [];
+        for (var k in state.sel) {
+          if (Object.prototype.hasOwnProperty.call(state.sel, k)) {
+            items.push({ card_id: Number(k), times: state.sel[k] });
+          }
+        }
+        if (!items.length) { LP.toast('请勾选需要核销的项目', 'error'); return; }
+        state.busy = true;
+        var btn = LP.$('#nextBtn');
+        btn.disabled = true;
+        btn.textContent = '发送中…';
+        LP.post('/api/verifications/draft', {
+          customer_id: state.cust.id,
+          items: items
+        }).then(function (d) {
+          location.href = 'verify-step2.html?id=' + d.id;
+        }).catch(function (e) {
+          state.busy = false;
+          btn.disabled = false;
+          btn.textContent = '下一步';
+          LP.toast(e.message, 'error');
+        });
+      }
+    })();
+  </script>
+</body>
+</html>

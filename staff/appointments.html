@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>新建预约 · 兰瓶美业</title>
+  <link rel="stylesheet" href="../css/mobile-app.css" />
+  <link rel="stylesheet" href="../assets/css/lp-app.css" />
+  <link rel="stylesheet" href="staff.css" />
+<link rel="stylesheet" href="../assets/css/polish-mobile.css" />
+</head>
+<body>
+  <div class="phone-page">
+    <div class="phone">
+      <div class="status-bar"><span>9:41</span><span>●●●</span></div>
+      <div class="phone-body no-tab" id="body">
+        <div class="nav-bar"><a class="back" href="appointment-list.html">‹</a><h1 id="pageTitle">新建预约</h1></div>
+
+        <div class="form-card">
+          <div class="form-row" id="custRow">
+            <span class="label">客户</span>
+            <span class="val" id="custVal" style="color:var(--text-3);">请选择客户</span>
+            <span class="arrow">›</span>
+          </div>
+
+          <div class="form-row">
+            <span class="label">项目</span>
+            <select class="field-input" id="project" style="width:auto;min-width:130px;height:36px;text-align:right;background:transparent;padding-right:0;">
+              <option value="">加载中…</option>
+            </select>
+          </div>
+
+          <div class="form-row">
+            <span class="label">预约时间</span>
+            <input class="field-input" id="startTime" type="datetime-local"
+              style="width:auto;height:36px;text-align:right;background:transparent;padding-right:0;" />
+          </div>
+        </div>
+
+        <div class="field-label">备注</div>
+        <div class="field-box">
+          <div class="form-area">
+            <textarea class="field-input" id="remark" maxlength="200" placeholder="需求说明、到店提醒等（选填）"></textarea>
+          </div>
+        </div>
+
+        <div style="padding:6px 16px 12px;">
+          <button class="btn-block" id="saveBtn">保存预约</button>
+        </div>
+        <div style="padding:0 16px;" id="dangerZone"></div>
+        <div class="pad-bottom"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../assets/js/lp-api.js"></script>
+  <script src="../assets/js/lp-mock.js?v=47"></script>
+  <script src="staff.js"></script>
+  <script>
+    (function () {
+      'use strict';
+      var editId = LP.param('id') ? Number(LP.param('id')) : null;
+      var user = LP.user() || {};
+      var cust = null, projects = [], saving = false;
+
+      STAFF.guard().then(function (me) {
+        user = me || user;
+        if (editId) {
+          LP.$('#pageTitle').textContent = '编辑预约';
+          document.title = '编辑预约 · 兰瓶美业';
+        }
+        LP.$('#startTime').value = defaultTime();
+        return Promise.all([
+          LP.get('/api/projects').catch(function () { return []; }),
+          editId ? loadAppointment(editId) : Promise.resolve(null)
+        ]);
+      }).then(function (res) {
+        projects = (res[0] && (res[0].list || res[0])) || [];
+        renderProjects();
+        var a = res[1];
+        if (a) fill(a);
+        bindPicker();
+      }).catch(function (e) { STAFF.fail(e); });
+
+      function defaultTime() {
+        var d = new Date();
+        d.setMinutes(d.getMinutes() + 30);
+        d.setMinutes(d.getMinutes() < 30 ? 30 : 0);
+        if (d.getMinutes() === 0) d.setHours(d.getHours() + 1);
+        var p = function (n) { return String(n).padStart(2, '0'); };
+        return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + 'T' + p(d.getHours()) + ':' + p(d.getMinutes());
+      }
+
+      function renderProjects() {
+        var sel = LP.$('#project');
+        var html = '<option value="">请选择项目</option>';
+        for (var i = 0; i < projects.length; i++) {
+          var p = projects[i];
+          html += '<option value="' + p.id + '">' + STAFF.esc(p.name) + ' · ' +
+            STAFF.money(p.price || 0) + ' / ' + (p.minutes || p.duration || 60) + '分钟</option>';
+        }
+        sel.innerHTML = html;
+      }
+
+      function loadAppointment(id) {
+        return LP.get('/api/appointments', { staff_id: user.id }).then(function (list) {
+          var hit = (list || []).filter(function (x) { return Number(x.id) === id; })[0];
+          if (hit) return hit;
+          return LP.get('/api/appointments').then(function (all) {
+            return (all || []).filter(function (x) { return Number(x.id) === id; })[0] || null;
+          });
+        });
+      }
+
+      function fill(a) {
+        cust = { id: a.customer_id, name: a.customer_name, phone: a.customer_phone };
+        LP.$('#custVal').textContent = (a.customer_name || '客户') + ' · ' + LP.fmt.phone(a.customer_phone);
+        LP.$('#custVal').style.color = 'var(--text)';
+        LP.$('#startTime').value = STAFF.toInput(a.start_time);
+        LP.$('#remark').value = a.remark || '';
+        if (a.project_id) LP.$('#project').value = String(a.project_id);
+        LP.mount('#dangerZone', '<button class="btn-sm danger" id="delBtn">删除预约</button>');
+        var del = LP.$('#delBtn');
+        if (del) del.addEventListener('click', function () {
+          LP.confirm('确定删除该预约？删除后不可恢复。', { okText: '删除' }).then(function (ok) {
+            if (!ok) return;
+            LP.del('/api/appointments/' + editId).then(function () {
+              LP.toast('预约已删除', 'success');
+              setTimeout(function () { location.href = 'appointment-list.html'; }, 500);
+            }).catch(function (e) { LP.toast(e.message, 'error'); });
+          });
+        });
+      }
+
+      function bindPicker() {
+        LP.$('#custRow').addEventListener('click', openPicker);
+        LP.$('#saveBtn').addEventListener('click', submit);
+      }
+
+      function openPicker() {
+        var m = LP.modal({
+          title: '选择客户',
+          body: '<div class="search-row" style="padding:0 0 8px;"><div class="search-box">' +
+            '<input id="mkw" type="search" placeholder="搜索姓名 / 手机号" autocomplete="off" /></div></div>' +
+            '<div id="mlist"><div class="st-load">加载中…</div></div>',
+          footer: null,
+          width: 360
+        });
+        var timer = null;
+        var search = function (q) {
+          LP.get('/api/customers', { q: q || '' }).then(function (d) {
+            var list = (d && d.list) || [];
+            if (!list.length) { LP.mount('#mlist', STAFF.empty('没有匹配的客户', '👤')); return; }
+            var h = '';
+            for (var i = 0; i < list.length; i++) {
+              var c = list[i];
+              h += '<div class="pick-row" data-pick="' + c.id + '">' +
+                '<span class="av">' + (c.avatar ? '<img src="' + STAFF.esc(STAFF.img(c.avatar)) + '" alt="" />' : STAFF.esc(String(c.name || '客').slice(0, 1))) + '</span>' +
+                '<div class="p-info"><h4>' + STAFF.esc(c.name || '—') + '</h4>' +
+                '<p>' + LP.fmt.phone(c.phone) + ' · ' + STAFF.esc(c.level || '普通') +
+                ' · 卡项 ' + (c.active_cards || 0) + '</p></div>' +
+                '<span class="go">›</span></div>';
+            }
+            LP.mount('#mlist', h);
+          }).catch(function (e) { LP.mount('#mlist', '<div class="st-err">' + STAFF.esc(e.message) + '</div>'); });
+        };
+        search('');
+        m.el.querySelector('#mkw').addEventListener('input', function () {
+          var v = this.value.trim();
+          clearTimeout(timer);
+          timer = setTimeout(function () { search(v); }, 300);
+        });
+        m.el.querySelector('#mlist').addEventListener('click', function (e) {
+          var row = e.target.closest('[data-pick]');
+          if (!row) return;
+          var pid = Number(row.getAttribute('data-pick'));
+          LP.get('/api/customers/' + pid).then(function (c) {
+            cust = c;
+            LP.$('#custVal').textContent = (c.name || '客户') + ' · ' + LP.fmt.phone(c.phone);
+            LP.$('#custVal').style.color = 'var(--text)';
+            m.close();
+          }).catch(function (err) { LP.toast(err.message, 'error'); });
+        });
+      }
+
+      function submit() {
+        if (saving) return;
+        if (!cust) { LP.toast('请先选择客户', 'error'); return; }
+        var pid = LP.$('#project').value;
+        var st = LP.$('#startTime').value;
+        if (!st) { LP.toast('请选择预约时间', 'error'); return; }
+        saving = true;
+        var btn = LP.$('#saveBtn');
+        btn.disabled = true;
+        btn.textContent = '保存中…';
+        var payload = {
+          customer_id: cust.id,
+          project_id: pid ? Number(pid) : null,
+          staff_id: user.id,
+          start_time: STAFF.fromInput(st),
+          remark: (LP.$('#remark').value || '').trim()
+        };
+        var task = editId
+          ? LP.put('/api/appointments/' + editId, payload)
+          : LP.post('/api/appointments', payload);
+        task.then(function () {
+          LP.toast(editId ? '预约已更新' : '预约已创建', 'success');
+          setTimeout(function () { location.href = 'appointment-list.html'; }, 600);
+        }).catch(function (e) {
+          saving = false;
+          btn.disabled = false;
+          btn.textContent = '保存预约';
+          LP.toast(e.message, 'error');
+        });
+      }
+    })();
+  </script>
+</body>
+</html>

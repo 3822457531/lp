@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>兰瓶美业连锁管理系统</title>
+<link rel="stylesheet" href="assets/css/lp-app.css" />
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+    color: #2f2a27; background: #faf8f6; min-height: 100vh;
+    background-image: radial-gradient(circle at 12% 6%, #fdeef2 0%, transparent 42%),
+                      radial-gradient(circle at 92% 92%, #f3ece5 0%, transparent 44%);
+  }
+  .hero { max-width: 1080px; margin: 0 auto; padding: 56px 24px 12px; }
+  .brand { display: flex; align-items: center; gap: 14px; }
+  .brand .mark {
+    width: 52px; height: 52px; border-radius: 16px; background: linear-gradient(135deg, #e85a7a, #d9556f);
+    color: #fff; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 700;
+    box-shadow: 0 10px 26px rgba(232, 90, 122, .28);
+  }
+  .brand h1 { margin: 0; font-size: 24px; font-weight: 600; letter-spacing: .5px; }
+  .brand p { margin: 4px 0 0; font-size: 13px; color: #8b8178; }
+  .hero-body { margin-top: 38px; display: flex; flex-wrap: wrap; align-items: flex-end; gap: 24px; }
+  .hero-body h2 { margin: 0; font-size: 32px; line-height: 1.35; font-weight: 600; max-width: 560px; }
+  .hero-body h2 em { color: #e85a7a; font-style: normal; }
+  .hero-body .cta { margin-left: auto; display: flex; gap: 12px; }
+  .btn-main {
+    display: inline-block; padding: 13px 26px; border-radius: 12px; text-decoration: none; font-size: 15px; font-weight: 600;
+    background: linear-gradient(135deg, #e85a7a, #d9556f); color: #fff; box-shadow: 0 12px 28px rgba(232, 90, 122, .26);
+  }
+  .btn-ghost {
+    display: inline-block; padding: 13px 22px; border-radius: 12px; text-decoration: none; font-size: 15px;
+    background: #fff; color: #6b625b; border: 1px solid #efe9e3;
+  }
+  .ports { max-width: 1080px; margin: 44px auto 0; padding: 0 24px 60px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
+  .port {
+    background: #fff; border-radius: 18px; padding: 24px 22px; text-decoration: none; color: inherit;
+    box-shadow: 0 12px 34px rgba(120, 96, 82, .08); border: 1px solid #f6f0ec; transition: transform .16s, box-shadow .16s;
+    display: flex; flex-direction: column; min-height: 208px;
+  }
+  .port:hover { transform: translateY(-3px); box-shadow: 0 18px 44px rgba(120, 96, 82, .14); }
+  .port .ico {
+    width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center; justify-content: center;
+    font-size: 19px; margin-bottom: 16px; background: #fdf1f4; color: #e85a7a;
+  }
+  .port:nth-child(2) .ico { background: #f4f1ec; color: #9a7d6f; }
+  .port:nth-child(3) .ico { background: #eef3f7; color: #5d7fa3; }
+  .port:nth-child(4) .ico { background: #eef7f1; color: #38905f; }
+  .port h3 { margin: 0 0 8px; font-size: 16px; font-weight: 600; }
+  .port p { margin: 0; font-size: 12.5px; color: #8b8178; line-height: 1.9; flex: 1; }
+  .port .go { margin-top: 14px; font-size: 13px; color: #e85a7a; font-weight: 600; }
+  .foot { text-align: center; font-size: 12px; color: #b6aca4; padding-bottom: 34px; }
+  .me-bar { max-width: 1080px; margin: 26px auto 0; padding: 0 24px; }
+  .me-bar .card {
+    background: #fff; border-radius: 14px; padding: 14px 20px; font-size: 13.5px; color: #6b625b;
+    display: flex; align-items: center; gap: 14px; border: 1px solid #f6f0ec; box-shadow: 0 8px 24px rgba(120, 96, 82, .06);
+  }
+  .me-bar .card a { color: #e85a7a; text-decoration: none; font-weight: 600; }
+  .me-bar .card button { border: none; background: none; color: #a79c93; cursor: pointer; font-size: 13px; }
+  @media (max-width: 900px) {
+    .ports { grid-template-columns: repeat(2, 1fr); }
+    .hero { padding-top: 34px; }
+    .hero-body h2 { font-size: 24px; }
+    .hero-body .cta { margin-left: 0; }
+  }
+  @media (max-width: 560px) {
+    .ports { grid-template-columns: 1fr; gap: 14px; padding-bottom: 40px; }
+    .port { min-height: 0; }
+  }
+</style>
+</head>
+<body>
+  <div class="hero">
+    <div class="brand">
+      <div class="mark">兰</div>
+      <div>
+        <h1>兰瓶美业连锁</h1>
+        <p>门店一体化管理平台 · 客户 / 项目 / 核销 / 出入库 / 薪资考核</p>
+      </div>
+    </div>
+    <div class="hero-body">
+      <h2>一套系统管理<em>连锁门店</em>的人、货、客与业绩</h2>
+      <div class="cta">
+        <a class="btn-main" href="/login.html">进入系统登录</a>
+        <a class="btn-ghost" href="/customer/verify.html">客户核销入口</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="me-bar" id="meBar" style="display:none">
+    <div class="card">
+      <span id="meText"></span>
+      <a id="meGo" href="/login.html">进入我的工作台 →</a>
+      <button id="meOut">退出登录</button>
+    </div>
+  </div>
+
+  <div class="ports">
+    <a class="port" href="/admin/dashboard.html">
+      <div class="ico">▦</div>
+      <h3>管理员端 · PC Web</h3>
+      <p>数据看板、客户与员工管理、项目全局维护、开卡核销、预约、审核、薪资、考核设置、短信与打卡设置、福利设置</p>
+      <div class="go">进入管理后台 →</div>
+    </a>
+    <a class="port" href="/manager/home.html">
+      <div class="ico">▤</div>
+      <h3>店长端 · App / H5</h3>
+      <p>本店客户与员工、项目查看、核销与补退、开卡、出入库调度、预约维护、考核、打卡、生日提醒设置</p>
+      <div class="go">进入店长工作台 →</div>
+    </a>
+    <a class="port" href="/staff/home.html">
+      <div class="ico">▣</div>
+      <h3>员工端 · App / H5</h3>
+      <p>本店客户、扫码核销三步流程、预约客户、打卡考勤、考核情况、个人薪资查询</p>
+      <div class="go">进入员工工作台 →</div>
+    </a>
+    <a class="port" href="/customer/verify.html">
+      <div class="ico">◈</div>
+      <h3>客户 · 短信核销页</h3>
+      <p>无需安装、无需登录。收到核销短信后打开链接，页面即为核销二维码，由员工扫码完成核销</p>
+      <div class="go">打开核销页 →</div>
+    </a>
+  </div>
+
+  <div class="foot">© 2024 兰瓶美业连锁 · Lanping Beauty Chain Management System</div>
+
+<script src="/assets/js/lp-api.js"></script>
+<script>
+(function () {
+  var me = LP.user();
+  if (me && LP.token()) {
+    document.getElementById('meBar').style.display = 'block';
+    document.getElementById('meText').textContent =
+      '当前登录：' + me.name + '（' + (me.role_name || me.role) + (me.store_name ? ' · ' + me.store_name : '') + '）';
+    document.getElementById('meGo').href = LP.homeFor(me.role);
+    document.getElementById('meOut').addEventListener('click', function () {
+      LP.logout();
+    });
+  }
+})();
+</script>
+</body>
+</html>

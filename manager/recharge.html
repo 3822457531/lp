@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>充值开卡 · 兰瓶美业</title>
+  <link rel="stylesheet" href="../css/mobile-app.css" />
+  <link rel="stylesheet" href="../assets/css/lp-app.css" />
+  <style>
+    .search-box input { width: 100%; background: transparent; font-size: 13px; height: 100%; border: none; outline: none; color: var(--text); }
+    .sum-card { display: flex; margin: 0 14px 10px; background: linear-gradient(135deg,#ffe1e9,#fff3f6); border-radius: 14px; padding: 14px; }
+    .sum-card > div { flex: 1; text-align: center; }
+    .sum-card .n { font-size: 18px; font-weight: 700; color: #d94a6b; }
+    .sum-card .l { font-size: 12px; color: var(--text-2); margin-top: 4px; }
+    .list-card .info h4 { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .list-card .info p { word-break: break-word; }
+    .list-card .actions { flex-direction: column; align-items: flex-end; gap: 4px; }
+    .pick-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; font-size: 14px; min-height: 44px; }
+    .pick-row button { border: none; background: var(--pink); color: #fff; border-radius: 8px; padding: 0 12px; height: 30px; font-size: 12px; }
+    .pick-item { padding: 10px 6px; border-bottom: 1px solid var(--border); font-size: 13px; cursor: pointer; }
+    .pick-item:active { background: #faf3f5; }
+    .pick-item .s { color: var(--text-2); font-size: 12px; margin-top: 3px; }
+  </style>
+<link rel="stylesheet" href="../assets/css/polish-mobile.css" />
+</head>
+<body>
+  <div class="phone-page">
+    <div class="phone">
+      <div class="status-bar" style="background:#f8a0b4;color:#fff;"><span>9:41</span><span>兰瓶</span><span>●●●</span></div>
+      <div class="phone-body">
+        <div class="nav-bar">
+          <a class="back" href="home.html">‹</a>
+          <h1>充值开卡</h1>
+          <span class="right" id="addBtn">+ 开卡</span>
+        </div>
+
+        <div class="sum-card">
+          <div><div class="n" id="sumCount">—</div><div class="l">卡项总数</div></div>
+          <div><div class="n" id="sumAmount">—</div><div class="l">实收合计</div></div>
+        </div>
+
+        <div class="search-row">
+          <div class="search-box"><input id="q" type="search" placeholder="搜索客户 / 项目 / 单号" /></div>
+        </div>
+
+        <div class="section-hd">卡项列表 <span id="countHint">—</span></div>
+        <div id="list"></div>
+      </div>
+
+      <a class="fab" href="javascript:;" id="fab">+</a>
+
+      <nav class="tab-bar">
+        <a href="home.html"><span class="dot"></span>首页</a>
+        <a href="customers.html"><span class="dot"></span>客户</a>
+        <a href="verify.html"><span class="dot"></span>核销</a>
+        <a href="mine.html"><span class="dot"></span>我的</a>
+      </nav>
+    </div>
+  </div>
+
+  <script src="../assets/js/lp-api.js"></script>
+  <script src="../assets/js/lp-mock.js?v=47"></script>
+  <script>
+    (function () {
+      'use strict';
+      var me = null;
+      var raw = [];
+      var listEl = document.getElementById('list');
+
+      function rowHtml(c) {
+        var av = LP.avatar(c.customer_name || '客', '');
+        return '<div class="list-card"><div class="row">' + av +
+          '<div class="info"><h4>' + LP.esc(c.customer_name || '—') + LP.tag(c.status || '') + '</h4>' +
+          '<p>' + LP.esc(c.project_name || '—') + '</p>' +
+          '<p>' + LP.esc(LP.fmt.num(c.total_times || 0)) + ' 次' +
+          (c.used_times === undefined ? '' : '（已用 ' + LP.esc(LP.fmt.num(c.used_times)) + '）') +
+          ' · 实收 ' + LP.esc(LP.fmt.money(c.paid_amount || c.amount || 0)) + '</p>' +
+          '<p style="font-size:12px;color:var(--text-2)">' + LP.esc(c.order_no || '—') + ' · ' + LP.esc(LP.fmt.date(c.created_at)) + '</p></div>' +
+          '<div class="actions"><span class="price">' + LP.esc(LP.fmt.money(c.amount || 0)) + '</span>' +
+          '<span style="font-size:12px;color:var(--text-2)">' + LP.esc(c.store_name || '') + '</span></div></div></div>';
+      }
+
+      function paint() {
+        document.getElementById('countHint').textContent = raw.length + ' 张';
+        if (!raw.length) { listEl.innerHTML = LP.empty('暂无卡项，点右上角开卡'); return; }
+        listEl.innerHTML = raw.map(rowHtml).join('');
+      }
+
+      function load() {
+        listEl.innerHTML = LP.skeleton(3);
+        var q = document.getElementById('q').value.trim();
+        LP.get('/api/cards', { q: q }).then(function (d) {
+          raw = (d && d.list) || [];
+          document.getElementById('sumCount').textContent = LP.fmt.num((d && d.total) || 0);
+          document.getElementById('sumAmount').textContent = LP.fmt.money((d && d.amount) || 0);
+          paint();
+        }).catch(function (e) {
+          listEl.innerHTML = LP.empty('卡项加载失败', '⚠');
+          LP.toast(e.message || '加载失败', 'error');
+        });
+      }
+
+      function pickCustomer() {
+        return new Promise(function (resolve) {
+          var settled = false;
+          function done(v) { if (!settled) { settled = true; resolve(v); } }
+          var m = LP.modal({
+            title: '选择客户',
+            width: 560,
+            footer: null,
+            body: '<div style="padding-bottom:10px"><div class="search-box"><input id="cq" type="search" placeholder="搜索姓名 / 手机号" /></div></div>' +
+              '<div id="clist" style="max-height:52vh;overflow:auto"><div class="lp-skeleton"><div></div><div></div><div></div></div></div>',
+            onClose: function () { done(null); }
+          });
+          function bind(items, isSearch) {
+            var box = m.body.querySelector('#clist');
+            if (!items.length) { box.innerHTML = LP.empty(isSearch ? '未找到客户' : '暂无客户'); return; }
+            box.innerHTML = items.map(function (c) {
+              return '<div class="pick-item" data-id="' + c.id + '"><b>' + LP.esc(c.name || '—') + '</b>' +
+                '<div class="s">' + LP.esc(LP.fmt.phone(c.phone)) + ' · ' + LP.esc(c.level || '普通') + '</div></div>';
+            }).join('');
+          }
+          function fetchList(q) {
+            LP.get('/api/customers', { q: q || '' }).then(function (d) { bind((d && d.list) || [], !!q); })
+              .catch(function (e) { m.body.querySelector('#clist').innerHTML = LP.empty('加载失败', '⚠'); LP.toast(e.message, 'error'); });
+          }
+          m.body.querySelector('#cq').addEventListener('input', LP.debounce(function (e) { fetchList(e.target.value.trim()); }, 300));
+          m.body.querySelector('#clist').addEventListener('click', function (e) {
+            var it = e.target.closest('.pick-item');
+            if (!it) return;
+            var id = it.getAttribute('data-id');
+            var name = it.querySelector('b').textContent;
+            var sub = it.querySelector('.s').textContent;
+            done({ id: id, name: name, sub: sub });
+            m.close();
+          });
+          fetchList('');
+        });
+      }
+
+      function openCreate() {
+        pickCustomer().then(function (cust) {
+          if (!cust) return;
+          LP.get('/api/projects').then(function (projects) {
+            var opts = (projects || []).filter(function (p) { return p.status !== '停用'; }).map(function (p) {
+              return { label: p.name + '（会员 ¥' + LP.fmt.money(p.member_price || 0) + '）', value: p.id };
+            });
+            if (!opts.length) { LP.toast('暂无可开卡项目', 'error'); return; }
+            var m = LP.modal({
+              title: '开卡 · ' + cust.name,
+              okText: '确认开卡',
+              width: 560,
+              body: '<div class="lp-form">' +
+                '<div class="lp-form-item"><label>客户</label><div class="pick-row"><span>' + LP.esc(cust.name) + '</span><button data-pick>重选</button></div></div>' +
+                '<div class="lp-form-item"><label>项目 <em>*</em></label><select class="lp-field" name="pj">' +
+                opts.map(function (o) { return '<option value="' + o.value + '">' + LP.esc(o.label) + '</option>'; }).join('') + '</select></div>' +
+                '<div class="lp-form-item"><label>总次数 <em>*</em></label><input class="lp-field" name="times" type="number" step="1" min="1" value="10" /></div>' +
+                '<div class="lp-form-item"><label>卡面金额</label><input class="lp-field" name="amount" type="number" step="0.01" value="0" /></div>' +
+                '<div class="lp-form-item"><label>实收金额</label><input class="lp-field" name="paid" type="number" step="0.01" value="0" /></div>' +
+                '<div class="lp-form-item"><label>&nbsp;</label><p class="hint" id="calcHint">按会员价自动计算，可手动修改</p></div>' +
+                '</div>',
+              onMount: function (api) {
+                var sel = api.body.querySelector('[name=pj]');
+                var times = api.body.querySelector('[name=times]');
+                var amount = api.body.querySelector('[name=amount]');
+                var paid = api.body.querySelector('[name=paid]');
+                var hint = api.body.querySelector('#calcHint');
+                function recalc() {
+                  var p = (projects || []).filter(function (x) { return String(x.id) === String(sel.value); })[0];
+                  if (!p) return;
+                  var t = Number(times.value || 0);
+                  var face = Number(p.member_price || p.price || 0) * (t || 0);
+                  amount.value = face.toFixed(2);
+                  paid.value = face.toFixed(2);
+                  hint.textContent = '会员价 ' + LP.fmt.money(p.member_price || 0) + ' × ' + (t || 0) + ' 次 = ' + LP.fmt.money(face);
+                }
+                sel.addEventListener('change', recalc);
+                times.addEventListener('input', recalc);
+                api.body.querySelector('[data-pick]').addEventListener('click', function () {
+                  pickCustomer().then(function (c2) {
+                    if (c2) { cust = c2; api.body.querySelector('.pick-row span').textContent = c2.name; }
+                  });
+                });
+                recalc();
+              },
+              onOk: function (api) {
+                var pid = api.body.querySelector('[name=pj]').value;
+                var t = Number(api.body.querySelector('[name=times]').value || 0);
+                var a = Number(api.body.querySelector('[name=amount]').value || 0);
+                var p = Number(api.body.querySelector('[name=paid]').value || 0);
+                if (!pid) return LP.toast('请选择项目', 'error');
+                if (!t || t < 1) return LP.toast('总次数需 ≥ 1', 'error');
+                api.setLoading(true, '开卡中…');
+                LP.post('/api/cards', {
+                  customer_id: Number(cust.id), project_id: Number(pid),
+                  total_times: t, amount: a, paid_amount: p
+                }).then(function (r) {
+                  api.close();
+                  LP.toast('开卡成功' + (r && r.order_no ? ' · ' + r.order_no : ''), 'success');
+                  load();
+                }).catch(function (e) { api.setLoading(false); LP.toast(e.message || '开卡失败', 'error'); });
+              }
+            });
+            return m;
+          }).catch(function (e) { LP.toast(e.message || '项目加载失败', 'error'); });
+        });
+      }
+
+      document.getElementById('addBtn').addEventListener('click', openCreate);
+      document.getElementById('fab').addEventListener('click', openCreate);
+      document.getElementById('q').addEventListener('input', LP.debounce(load, 320));
+
+      LP.requireRoles(['manager']).then(function (u) { me = u; load(); }).catch(function () {});
+    })();
+  </script>
+</body>
+</html>

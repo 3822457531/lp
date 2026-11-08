@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>数据看板 · 兰瓶管理后台</title>
+  <link rel="stylesheet" href="css/admin.css" />
+  <link rel="stylesheet" href="../assets/css/lp-app.css" />
+  <link rel="stylesheet" href="../assets/css/polish.css" />
+</head>
+<body data-page="dashboard">
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <div class="main">
+      <header class="topbar">
+        <div class="topbar-title">数据看板 <span>多维度经营与员工数据概览</span></div>
+        <div class="topbar-actions" id="top-user"></div>
+      </header>
+      <div class="content">
+        <div class="toolbar" style="margin-bottom:16px;">
+          <input class="field" type="date" id="f-from" style="width:150px;" />
+          <span style="color:#9aa3b2;font-size:12px;">至</span>
+          <input class="field" type="date" id="f-to" style="width:150px;" />
+          <select class="field" id="f-store" style="width:150px;"><option value="">全部门店</option></select>
+          <button class="btn" id="btn-query">查询</button>
+          <button class="btn ghost" id="btn-month">本月</button>
+          <button class="btn ghost" id="btn-today">今日</button>
+        </div>
+
+        <div class="stat-grid" id="stats" style="grid-template-columns:repeat(4,1fr);"></div>
+
+        <div style="display:grid;grid-template-columns:1.55fr 1fr;gap:14px;margin-bottom:14px;">
+          <div class="panel">
+            <div class="panel-hd">
+              <h3>近 7 日消费趋势</h3>
+              <span style="font-size:12px;color:#9aa3b2;">合计 <b id="trend-sum" style="color:#1b2030;">¥0</b></span>
+            </div>
+            <div class="panel-bd">
+              <div id="trend" class="chart-bars"></div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-hd">
+              <h3>项目消费占比</h3>
+              <span style="font-size:12px;color:#9aa3b2;">按核销金额</span>
+            </div>
+            <div class="panel-bd"><div id="mix"></div></div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+          <div class="panel">
+            <div class="panel-hd"><h3>员工业绩排行</h3><span style="font-size:12px;color:#9aa3b2;">本月核销金额</span></div>
+            <div class="panel-bd"><div id="rank"></div></div>
+          </div>
+          <div class="panel">
+            <div class="panel-hd"><h3>门店概览</h3><span style="font-size:12px;color:#9aa3b2;">客户 / 员工 / 营收</span></div>
+            <div class="lp-scroll-x" id="stores"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../assets/js/lp-api.js"></script>
+  <script src="../assets/js/lp-mock.js?v=47"></script>
+  <script src="js/layout.js"></script>
+  <script>
+  (function () {
+    'use strict';
+    var D = null;
+
+    function todayStr(d) {
+      var t = d || new Date();
+      return t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0');
+    }
+    function firstOfMonth() {
+      var t = new Date();
+      return t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-01';
+    }
+
+    function card(label, value, trend, ico, cls) {
+      return '<div class="stat-card"><div class="label">' + label +
+        '<span class="icon-box ' + (cls || 'brown') + '">' + ico + '</span></div>' +
+        '<div class="value">' + value + '</div><div class="trend">' + trend + '</div></div>';
+    }
+
+    function renderStats(s) {
+      document.getElementById('stats').innerHTML = [
+        card('营收', LP.fmt.money(s.revenue), D.range ? D.range.from + ' ~ ' + D.range.to : '实收合计', '¥', 'brown'),
+        card('开卡金额', LP.fmt.money(s.card_amount), '实付合计', '卡', 'orange'),
+        card('核销金额', LP.fmt.money(s.verify_amount), '已完成核销', '✓', 'green'),
+        card('核销笔数', LP.fmt.num(s.verify_count), '已完成核销', '次', 'blue'),
+        card('新增客户', LP.fmt.num(s.new_customers), '区间建档', '+', 'green'),
+        card('待核销', LP.fmt.num(s.pending_verify), '待客户到店', '⏳', 'orange'),
+        card('待审核', LP.fmt.num(s.pending_audit), '注册申请', '！', 'blue'),
+        card('客户总数', LP.fmt.num(s.customer_total), '员工 ' + LP.fmt.num(s.staff_total) + ' 人', '👤', 'brown')
+      ].join('');
+    }
+
+    function renderTrend(list) {
+      list = list || [];
+      var max = Math.max.apply(null, list.map(function (x) { return Number(x.total) || 0; }).concat([1]));
+      var sum = list.reduce(function (a, b) { return a + (Number(b.total) || 0); }, 0);
+      document.getElementById('trend-sum').textContent = LP.fmt.money(sum);
+      document.getElementById('trend').innerHTML = list.map(function (x) {
+        var h = Math.max(4, Math.round((Number(x.total) || 0) / max * 150));
+        return '<div class="bar-col" title="' + LP.esc(x.label || x.date) + ' ' + LP.fmt.money(x.total) + '">' +
+          '<div class="bar-val">' + (x.total ? LP.fmt.num(Math.round(x.total / 100) / 10) + 'k' : '') + '</div>' +
+          '<div class="bar" style="height:' + h + 'px;"></div>' +
+          '<div class="bar-x">' + LP.esc(x.label || '') + '</div></div>';
+      }).join('') || LP.empty('暂无数据');
+    }
+
+    function renderMix(list) {
+      list = (list || []).slice(0, 6);
+      var total = list.reduce(function (a, b) { return a + (Number(b.amount) || 0); }, 0) || 1;
+      document.getElementById('mix').innerHTML = list.map(function (x) {
+        var pct = Math.round((Number(x.amount) || 0) / total * 100);
+        return '<div class="mix-row"><div class="mix-hd"><span>' + LP.esc(x.name) + '</span>' +
+          '<b>' + LP.fmt.money(x.amount) + ' · ' + pct + '%</b></div>' +
+          '<div class="mix-track"><i style="width:' + pct + '%"></i></div></div>';
+      }).join('') || LP.empty('暂无数据');
+    }
+
+    function renderRank(list) {
+      list = (list || []).slice(0, 6);
+      var max = Math.max.apply(null, list.map(function (x) { return Number(x.amount) || 0; }).concat([1]));
+      document.getElementById('rank').innerHTML = list.map(function (x, i) {
+        return '<div class="rank-row"><span class="rank-no' + (i < 3 ? ' top' : '') + '">' + (i + 1) + '</span>' +
+          '<span class="rank-name">' + LP.esc(x.name) + '</span>' +
+          '<span class="rank-track"><i style="width:' + Math.round((Number(x.amount) || 0) / max * 100) + '%"></i></span>' +
+          '<b class="rank-val">' + LP.fmt.money(x.amount) + '</b></div>';
+      }).join('') || LP.empty('暂无数据');
+    }
+
+    function renderStores(list) {
+      LP.mount('#stores', LP.table({
+        columns: [
+          { title: '门店', render: function (r) { return LP.esc(r.name || '—'); } },
+          { title: '客户', render: function (r) { return LP.fmt.num(r.customer_count) + ' 人'; } },
+          { title: '员工', render: function (r) { return LP.fmt.num(r.staff_count) + ' 人'; } },
+          { title: '营收', cls: 'price', render: function (r) { return LP.fmt.money(r.revenue); } },
+          { title: '核销', render: function (r) { return LP.fmt.num(r.verify_count) + ' 笔'; } },
+          { title: '状态', render: function (r) { return LP.tag(r.status || '营业中'); } }
+        ],
+        rows: list || [],
+        emptyText: '暂无门店数据'
+      }));
+    }
+
+    function load() {
+      var q = {
+        from: document.getElementById('f-from').value,
+        to: document.getElementById('f-to').value,
+        store_id: document.getElementById('f-store').value
+      };
+      LP.get('/api/dashboard', q).then(function (d) {
+        D = d || {};
+        renderStats(D.stats || {});
+        renderTrend(D.trend);
+        renderMix(D.project_mix);
+        renderRank(D.staff_rank);
+        renderStores(D.stores);
+      }).catch(function (e) {
+        LP.toast((e && e.message) || '看板加载失败', 'error');
+      });
+    }
+
+    function init() {
+      document.getElementById('f-from').value = firstOfMonth();
+      document.getElementById('f-to').value = todayStr();
+      LP.get('/api/stores').then(function (list) {
+        document.getElementById('f-store').innerHTML = '<option value="">全部门店</option>' +
+          (list || []).filter(function (s) { return s.status !== '停业'; }).map(function (s) {
+            return '<option value="' + s.id + '">' + LP.esc(s.name) + '</option>';
+          }).join('');
+      }).catch(function () {}).then(load);
+
+      document.getElementById('btn-query').addEventListener('click', load);
+      document.getElementById('f-store').addEventListener('change', load);
+      document.getElementById('btn-month').addEventListener('click', function () {
+        document.getElementById('f-from').value = firstOfMonth();
+        document.getElementById('f-to').value = todayStr();
+        load();
+      });
+      document.getElementById('btn-today').addEventListener('click', function () {
+        document.getElementById('f-from').value = todayStr();
+        document.getElementById('f-to').value = todayStr();
+        load();
+      });
+    }
+
+    LP.requireRoles(['admin']).then(init).catch(function () {});
+  })();
+  </script>
+
+  <style>
+    .chart-bars { display: flex; align-items: flex-end; gap: 10px; height: 210px; padding-top: 18px; }
+    .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; }
+    .bar { width: 100%; max-width: 46px; border-radius: 8px 8px 4px 4px;
+      background: linear-gradient(180deg, #c2a492, #9a7d6f); opacity: .92; transition: opacity .2s; }
+    .bar-col:hover .bar { opacity: 1; }
+    .bar-val { font-size: 11px; color: #9aa3b2; margin-bottom: 6px; font-variant-numeric: tabular-nums; }
+    .bar-x { font-size: 11px; color: #9aa3b2; margin-top: 8px; }
+    .mix-row { margin-bottom: 14px; }
+    .mix-hd { display: flex; justify-content: space-between; font-size: 12.5px; color: #67707f; margin-bottom: 6px; }
+    .mix-hd b { color: #1b2030; font-weight: 600; font-variant-numeric: tabular-nums; }
+    .mix-track { height: 8px; border-radius: 6px; background: #f1f3f7; overflow: hidden; }
+    .mix-track i { display: block; height: 100%; border-radius: 6px; background: linear-gradient(90deg, #d8bdab, #9a7d6f); }
+    .rank-row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px dashed #f0f2f6; }
+    .rank-row:last-child { border-bottom: none; }
+    .rank-no { width: 20px; height: 20px; border-radius: 6px; background: #f2f4f8; color: #8a93a3;
+      font-size: 11px; display: inline-flex; align-items: center; justify-content: center; font-weight: 600; }
+    .rank-no.top { background: #f6efe9; color: #7f6455; }
+    .rank-name { width: 64px; font-size: 13px; color: #1b2030; }
+    .rank-track { flex: 1; height: 7px; background: #f1f3f7; border-radius: 6px; overflow: hidden; }
+    .rank-track i { display: block; height: 100%; background: linear-gradient(90deg, #e2cbb9, #b08e79); border-radius: 6px; }
+    .rank-val { font-size: 12.5px; font-variant-numeric: tabular-nums; color: #1b2030; }
+  </style>
+</body>
+</html>

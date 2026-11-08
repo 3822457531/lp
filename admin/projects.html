@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>项目管理 · 兰瓶管理后台</title>
+  <link rel="stylesheet" href="css/admin.css" />
+  <link rel="stylesheet" href="../assets/css/lp-app.css" />
+  <link rel="stylesheet" href="../assets/css/polish.css" />
+</head>
+<body data-page="projects">
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <div class="main">
+      <header class="topbar">
+        <div class="topbar-title">项目管理 <span>项目价格、时长、包含次数与上下架</span></div>
+        <div class="topbar-actions" id="top-user"></div>
+      </header>
+      <div class="content">
+        <div class="stat-grid" style="grid-template-columns: repeat(3, 1fr);" id="stats"></div>
+
+        <div class="panel">
+          <div class="panel-hd">
+            <h3>项目列表</h3>
+            <button class="btn" id="btn-new">+ 新增项目</button>
+          </div>
+          <div class="panel-bd">
+            <div class="toolbar">
+              <input class="field search" id="f-q" placeholder="项目名称 / 分类" style="width:240px;" />
+              <select class="field" id="f-cat" style="width:150px;"><option value="">全部分类</option></select>
+              <select class="field" id="f-status" style="width:140px;">
+                <option value="">全部状态</option>
+                <option value="启用">已上架</option>
+                <option value="下架">已下架</option>
+              </select>
+              <button class="btn" id="btn-search">查询</button>
+            </div>
+          </div>
+          <div class="lp-scroll-x" id="list"></div>
+          <div class="pagination" id="count"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../assets/js/lp-api.js"></script>
+  <script src="../assets/js/lp-mock.js?v=47"></script>
+  <script src="js/layout.js"></script>
+  <script>
+  (function () {
+    'use strict';
+    var ROWS = [];
+
+    function err(e) { LP.toast((e && e.message) || '操作失败', 'error'); }
+    function statusTag(r) {
+      return r.status === '下架'
+        ? '<span class="tag tag-gray">已下架</span>'
+        : '<span class="tag tag-green">已上架</span>';
+    }
+
+    function renderStats() {
+      var on = ROWS.filter(function (r) { return r.status !== '下架'; });
+      var avg = on.length ? on.reduce(function (a, b) { return a + (Number(b.price) || 0); }, 0) / on.length : 0;
+      var cats = {};
+      on.forEach(function (r) { cats[r.category || '其他'] = 1; });
+      document.getElementById('stats').innerHTML =
+        '<div class="stat-card"><div class="label">在售项目<span class="icon-box brown">✦</span></div>' +
+          '<div class="value">' + LP.fmt.num(on.length) + '</div><div class="trend">共 ' + ROWS.length + ' 个项目</div></div>' +
+        '<div class="stat-card"><div class="label">平均单价<span class="icon-box green">¥</span></div>' +
+          '<div class="value">' + LP.fmt.money(avg) + '</div><div class="trend">按项目原价</div></div>' +
+        '<div class="stat-card"><div class="label">项目分类<span class="icon-box orange">◈</span></div>' +
+          '<div class="value">' + Object.keys(cats).length + '</div><div class="trend">' + Object.keys(cats).join(' · ') + '</div></div>';
+    }
+
+    function renderList() {
+      var q = document.getElementById('f-q').value.trim().toLowerCase();
+      var cat = document.getElementById('f-cat').value;
+      var rows = ROWS.filter(function (r) {
+        if (cat && (r.category || '') !== cat) return false;
+        if (!q) return true;
+        return ((r.name || '') + ' ' + (r.category || '')).toLowerCase().indexOf(q) >= 0;
+      });
+      renderStats();
+      LP.mount('#list', LP.table({
+        columns: [
+          { title: '项目', render: function (r) {
+              return '<b style="font-weight:600;">' + LP.esc(r.name || '—') + '</b><br/><span class="meta">' +
+                LP.esc(r.category || '未分类') + ' · ' + LP.fmt.num(r.minutes || 60) + ' 分钟</span>';
+          }},
+          { title: '包含次数', render: function (r) { return LP.fmt.num(r.total_times || 10) + ' 次'; } },
+          { title: '原价', cls: 'price', render: function (r) { return LP.fmt.money(r.price); } },
+          { title: '会员价', cls: 'price', render: function (r) { return LP.fmt.money(r.member_price || r.price); } },
+          { title: '限购', render: function (r) { return r.limit_per ? LP.fmt.num(r.limit_per) + ' 份/人' : '不限'; } },
+          { title: '状态', render: statusTag },
+          { title: '操作', render: function (r) {
+              var toggle = r.status === '下架'
+                ? '<a class="btn-link" data-act="on" data-id="' + r.id + '">上架</a>'
+                : '<a class="btn-link danger" data-act="off" data-id="' + r.id + '">下架</a>';
+              return '<span class="ops"><a class="btn-link" data-act="edit" data-id="' + r.id + '">编辑</a>' + toggle + '</span>';
+          }}
+        ],
+        rows: rows,
+        emptyText: '没有匹配的项目'
+      }));
+      LP.mount('#count', '<span>共 ' + rows.length + ' 个项目</span>');
+    }
+
+    function load() {
+      LP.mount('#list', '<div style="padding:18px;">' + LP.skeleton(5) + '</div>');
+      LP.get('/api/projects').then(function (list) {
+        ROWS = list || [];
+        var cats = {};
+        ROWS.forEach(function (r) { if (r.category) cats[r.category] = 1; });
+        document.getElementById('f-cat').innerHTML = '<option value="">全部分类</option>' +
+          Object.keys(cats).map(function (c) { return '<option value="' + LP.esc(c) + '">' + LP.esc(c) + '</option>'; }).join('');
+        renderList();
+      }).catch(function (e) {
+        err(e);
+        LP.mount('#list', LP.empty('项目数据加载失败'));
+      });
+    }
+
+    function openForm(row) {
+      row = row || {};
+      var editing = !!row.id;
+      LP.formModal({
+        title: editing ? '编辑项目' : '新增项目',
+        okText: editing ? '保存' : '创建',
+        fields: [
+          { name: 'name', label: '项目名称', required: true, value: row.name || '' },
+          { name: 'category', label: '分类', placeholder: '面部清洁 / 身体护理…', value: row.category || '' },
+          { name: 'price', label: '原价', type: 'number', value: row.price === undefined ? 298 : row.price, required: true },
+          { name: 'member_price', label: '会员价', type: 'number', value: row.member_price === undefined ? row.price || 298 : row.member_price },
+          { name: 'minutes', label: '时长（分钟）', type: 'number', value: row.minutes || 60 },
+          { name: 'total_times', label: '包含次数', type: 'number', value: row.total_times || 10 },
+          { name: 'limit_per', label: '每人限购', type: 'number', value: row.limit_per || 0, hint: '0 = 不限' },
+          { name: 'status', label: '状态', type: 'select', options: [{ value: '启用', label: '上架' }, { value: '下架', label: '下架' }], value: row.status || '启用' }
+        ],
+        onSubmit: function (out) {
+          var body = {
+            name: out.name, category: out.category,
+            price: Number(out.price) || 0, member_price: Number(out.member_price) || 0,
+            minutes: Number(out.minutes) || 60, total_times: Number(out.total_times) || 1,
+            limit_per: Number(out.limit_per) || 0, status: out.status
+          };
+          var p = editing ? LP.put('/api/projects/' + row.id, body) : LP.post('/api/projects', body);
+          return p.then(function () {
+            LP.toast(editing ? '项目已更新' : '项目已创建', 'success');
+            load();
+          });
+        }
+      });
+    }
+
+    function toggle(row, next) {
+      LP.confirm('确定' + (next === '启用' ? '上架' : '下架') + '项目「' + (row.name || '') + '」？').then(function (ok) {
+        if (!ok) return;
+        LP.put('/api/projects/' + row.id, Object.assign({}, row, { status: next })).then(function () {
+          LP.toast('已更新', 'success');
+          load();
+        }).catch(err);
+      }).catch(err);
+    }
+
+    function init(me) {
+      document.dispatchEvent(new CustomEvent('lp:user', { detail: me }));
+      load();
+      document.getElementById('btn-search').addEventListener('click', renderList);
+      document.getElementById('f-q').addEventListener('input', LP.debounce(renderList, 300));
+      document.getElementById('f-cat').addEventListener('change', renderList);
+      document.getElementById('btn-new').addEventListener('click', function () { openForm(null); });
+      LP.on(document, 'click', '[data-act="edit"]', function (e, t) {
+        var id = t.getAttribute('data-id');
+        openForm(ROWS.filter(function (r) { return String(r.id) === String(id); })[0] || { id: id });
+      });
+      LP.on(document, 'click', '[data-act="on"]', function (e, t) {
+        var id = t.getAttribute('data-id');
+        toggle(ROWS.filter(function (r) { return String(r.id) === String(id); })[0], '启用');
+      });
+      LP.on(document, 'click', '[data-act="off"]', function (e, t) {
+        var id = t.getAttribute('data-id');
+        toggle(ROWS.filter(function (r) { return String(r.id) === String(id); })[0], '下架');
+      });
+    }
+
+    LP.requireRoles(['admin']).then(init).catch(function () {});
+  })();
+  </script>
+</body>
+</html>

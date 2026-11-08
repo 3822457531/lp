@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>我的薪资 · 兰瓶美业</title>
+  <link rel="stylesheet" href="../css/mobile-app.css" />
+  <link rel="stylesheet" href="../assets/css/lp-app.css" />
+  <link rel="stylesheet" href="staff.css" />
+<link rel="stylesheet" href="../assets/css/polish-mobile.css" />
+</head>
+<body>
+  <div class="phone-page">
+    <div class="phone">
+      <div class="status-bar"><span>9:41</span><span>●●●</span></div>
+      <div class="phone-body no-tab" id="body">
+        <div class="nav-bar"><a class="back" href="home.html">‹</a><h1>我的薪资</h1></div>
+        <div id="chips"></div>
+        <div id="main"><div class="st-load">加载中…</div></div>
+        <div class="pad-bottom"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../assets/js/lp-api.js"></script>
+  <script src="../assets/js/lp-mock.js?v=47"></script>
+  <script src="staff.js"></script>
+  <script>
+    (function () {
+      'use strict';
+      var user = LP.user() || {};
+      var month = LP.nowMonth();
+
+      STAFF.guard().then(function (me) {
+        user = me || user;
+        renderChips();
+        bind();
+        return load();
+      }).catch(function () { });
+
+      function months() {
+        var out = [];
+        for (var i = 0; i < 6; i++) {
+          var m = LP.monthsBack(i);
+          out.push([m, LP.fmt.month(m)]);
+        }
+        return out;
+      }
+
+      function renderChips() {
+        LP.mount('#chips', STAFF.chips(months(), month, 'v'));
+      }
+
+      function bind() {
+        LP.on('#chips', 'click', '.chip', function () {
+          month = this.getAttribute('data-v');
+          renderChips();
+          load();
+        });
+      }
+
+      function load() {
+        LP.mount('#main', '<div class="st-load">加载中…</div>');
+        return LP.get('/api/salary/records', { month: month }).then(function (d) {
+          var list = (d && d.list) || [];
+          var mine = list.filter(function (r) {
+            if (r.user_id !== undefined && r.user_id !== null) return Number(r.user_id) === Number(user.id);
+            return r.user_name === user.name;
+          });
+          render(mine[0] || null);
+        }).catch(function (e) {
+          LP.mount('#main', '<div class="st-err">' + STAFF.esc(e.message) + '</div>');
+        });
+      }
+
+      function render(rec) {
+        if (!rec) {
+          LP.mount('#main',
+            '<div class="tip-box" style="margin-top:16px;">📝 ' + STAFF.esc(LP.fmt.month(month)) +
+            ' 本月薪资尚未核算，核算完成后可在此查看明细。</div>' +
+            '<div class="st-muted st-center" style="padding:20px 16px;">薪资由店长每月核算发放，如有疑问请联系门店管理。</div>');
+          return;
+        }
+        var detail = rec.detail || {};
+        var formula = detail.formula || [];
+
+        var html = '<div class="salary-hero" style="margin-top:14px;">' +
+          '<div class="label">' + STAFF.esc(LP.fmt.month(month)) + ' 实发薪资</div>' +
+          '<div class="amt">' + STAFF.money(rec.total || 0) + '</div>' +
+          '<div class="st-muted" style="margin-top:6px;">状态：' + STAFF.esc(rec.status || '待发放') +
+          ' · 门店：' + STAFF.esc(rec.store_name || '—') + '</div>' +
+          '</div>';
+
+        html += '<div class="stat-grid" style="grid-template-columns:repeat(3,1fr);">' +
+          '<div class="st-cell"><div class="n">' + (rec.attendance_days || 0) + '</div><div class="l">出勤天数</div></div>' +
+          '<div class="st-cell"><div class="n">' + (rec.late_days || 0) + '</div><div class="l">迟到</div></div>' +
+          '<div class="st-cell"><div class="n">' + (rec.absent_days || 0) + '</div><div class="l">缺勤</div></div>' +
+          '</div>';
+
+        html += '<div class="section-hd">薪资明细</div><div class="form-card salary-rows" style="padding:4px 16px;">';
+        html += row('基本工资', STAFF.money(rec.base || 0));
+        html += row('业绩金额', STAFF.money(rec.perf_amount || 0));
+        html += row('业绩提成', STAFF.money(rec.perf_commission || 0));
+        html += row('开卡金额', STAFF.money(rec.card_amount || 0));
+        html += row('开卡提成', STAFF.money(rec.card_commission || 0));
+        html += row('奖励 / 全勤', STAFF.money(rec.bonus || 0));
+        html += row('扣款', rec.deduction ? '-' + STAFF.money(rec.deduction) : STAFF.money(0));
+        html += '<div class="kv total"><span class="k">实发合计</span><span class="v">' + STAFF.money(rec.total || 0) + '</span></div>';
+        html += '</div>';
+
+        if (formula.length) {
+          html += '<div class="section-hd">计算过程</div><div class="form-card" style="padding:6px 16px;">';
+          for (var i = 0; i < formula.length; i++) {
+            html += '<div class="formula-line">' + STAFF.esc(formula[i]) + '</div>';
+          }
+          html += '</div>';
+        }
+
+        LP.mount('#main', html);
+      }
+
+      function row(k, v) {
+        return '<div class="kv"><span class="k">' + STAFF.esc(k) + '</span><span class="v">' + STAFF.esc(v) + '</span></div>';
+      }
+    })();
+  </script>
+</body>
+</html>

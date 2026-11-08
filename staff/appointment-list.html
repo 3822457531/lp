@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>我的预约 · 兰瓶美业</title>
+  <link rel="stylesheet" href="../css/mobile-app.css" />
+  <link rel="stylesheet" href="../assets/css/lp-app.css" />
+  <link rel="stylesheet" href="staff.css" />
+<link rel="stylesheet" href="../assets/css/polish-mobile.css" />
+</head>
+<body>
+  <div class="phone-page">
+    <div class="phone">
+      <div class="status-bar"><span>9:41</span><span>●●●</span></div>
+      <div class="phone-body no-tab" id="body">
+        <div class="nav-bar"><a class="back" href="home.html">‹</a><h1>我的预约</h1>
+          <a class="right" href="appointments.html" style="color:var(--pink);font-size:13px;">新建</a></div>
+
+        <div class="search-row">
+          <input class="field-input" id="date" type="date"
+            style="flex:1;height:36px;font-size:13px;color:var(--text);background:#fff;" />
+          <button class="btn-sm ghost" id="clearDate" style="height:36px;">全部</button>
+        </div>
+
+        <div id="chips"></div>
+        <div id="list"><div class="st-load">加载中…</div></div>
+        <div class="pad-bottom"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../assets/js/lp-api.js"></script>
+  <script src="../assets/js/lp-mock.js?v=47"></script>
+  <script src="staff.js"></script>
+  <script>
+    (function () {
+      'use strict';
+      var user = LP.user() || {};
+      var filter = '';
+      var dateVal = '';
+      var all = [];
+
+      STAFF.guard().then(function (me) {
+        user = me || user;
+        renderChips();
+        bind();
+        return load();
+      }).catch(function () { });
+
+      function renderChips() {
+        var list = [['', '全部'], ['待服务', '待服务'], ['已完成', '已完成'], ['已取消', '已取消']];
+        LP.mount('#chips', STAFF.chips(list, filter, 'v'));
+      }
+
+      function bind() {
+        LP.on('#chips', 'click', '.chip', function () {
+          filter = this.getAttribute('data-v') || '';
+          renderChips();
+          render();
+        });
+        LP.$('#date').addEventListener('change', function () {
+          dateVal = this.value || '';
+          load();
+        });
+        LP.$('#clearDate').addEventListener('click', function () {
+          LP.$('#date').value = '';
+          dateVal = '';
+          load();
+        });
+        LP.on('#list', 'click', '[data-act]', function (e) {
+          e.stopPropagation();
+          var id = Number(this.getAttribute('data-id'));
+          var act = this.getAttribute('data-act');
+          var rec = find(id);
+          if (!rec) return;
+          if (act === 'confirm') return setStatus(id, '已确认', '确定接单该预约？');
+          if (act === 'done') return setStatus(id, '已完成', '确认客户已完成服务？');
+          if (act === 'cancel') return setStatus(id, '已取消', '确定取消该预约？取消后将通知客户。');
+          if (act === 'time') return reschedule(rec);
+        });
+      }
+
+      function find(id) {
+        for (var i = 0; i < all.length; i++) if (Number(all[i].id) === id) return all[i];
+        return null;
+      }
+
+      function load() {
+        LP.mount('#list', '<div class="st-load">加载中…</div>');
+        var q = { staff_id: user.id };
+        if (dateVal) q.date = dateVal;
+        return LP.get('/api/appointments', q).then(function (list) {
+          all = list || [];
+          render();
+        }).catch(function (e) {
+          LP.mount('#list', '<div class="st-err">' + STAFF.esc(e.message) + '</div>');
+        });
+      }
+
+      function render() {
+        var rows = all.slice().filter(function (a) {
+          if (!filter) return true;
+          return STAFF.apptGroup(a.status) === filter;
+        });
+        if (!rows.length) {
+          LP.mount('#list', STAFF.empty(dateVal ? '当日暂无预约' : '暂无预约记录', '📅'));
+          return;
+        }
+        var groups = ['待服务', '已完成', '已取消'];
+        var html = '';
+        for (var g = 0; g < groups.length; g++) {
+          var name = groups[g];
+          var items = rows.filter(function (a) { return STAFF.apptGroup(a.status) === name; });
+          if (!items.length) continue;
+          html += '<div class="group-hd">' + name + '（' + items.length + '）</div><div class="list-card" style="padding:0;">';
+          for (var i = 0; i < items.length; i++) {
+            var a = items[i];
+            var t = STAFF.dt(a.start_time);
+            var acts = '';
+            if (a.status === '待确认') {
+              acts += '<button class="btn-sm solid" data-act="confirm" data-id="' + a.id + '">接单</button>';
+            }
+            if (name === '待服务') {
+              acts += '<button class="btn-sm outline" data-act="time" data-id="' + a.id + '">改期</button>';
+              acts += '<button class="btn-sm solid" data-act="done" data-id="' + a.id + '">完成</button>';
+              acts += '<button class="btn-sm ghost" data-act="cancel" data-id="' + a.id + '">取消</button>';
+            }
+            html += '<div class="appt-item">' +
+              '<div class="row">' +
+              '<div class="av">' + STAFF.esc(String(a.customer_name || '客').slice(-1)) + '</div>' +
+              '<div class="info"><h4>' + STAFF.esc(a.customer_name || '客户') +
+              '<span class="tag ' + STAFF.tagClass(a.status) + '">' + STAFF.esc(a.status || '—') + '</span></h4>' +
+              '<p>' + t.date + ' ' + t.time + ' · ' + STAFF.esc(a.project_name || '项目待定') + '</p></div>' +
+              '</div>' +
+              (acts ? '<div class="appt-acts">' + acts + '</div>' : '') +
+              '</div>';
+          }
+          html += '</div>';
+        }
+        LP.mount('#list', html);
+      }
+
+      function setStatus(id, status, msg) {
+        LP.confirm(msg, { okText: '确定' }).then(function (ok) {
+          if (!ok) return;
+          LP.post('/api/appointments/' + id + '/status', { status: status }).then(function () {
+            LP.toast('已更新为「' + status + '」', 'success');
+            var rec = find(id);
+            if (rec) rec.status = status;
+            render();
+          }).catch(function (e) { LP.toast(e.message, 'error'); });
+        });
+      }
+
+      function reschedule(rec) {
+        var m = LP.modal({
+          title: '修改预约时间',
+          body: '<div class="field-label" style="padding-left:0;">新的预约时间</div>' +
+            '<input class="field-input" id="newTime" type="datetime-local" value="' + STAFF.toInput(rec.start_time) + '" />' +
+            '<p class="st-muted" style="margin-top:8px;">客户：' + STAFF.esc(rec.customer_name || '—') + '</p>',
+          okText: '保存',
+          width: 340,
+          onOk: function (api) {
+            var v = api.el.querySelector('#newTime').value;
+            if (!v) { LP.toast('请选择时间', 'error'); return; }
+            api.setLoading(true);
+            LP.put('/api/appointments/' + rec.id, {
+              start_time: STAFF.fromInput(v),
+              status: '已改约'
+            }).then(function () {
+              api.close();
+              LP.toast('已改期', 'success');
+              load();
+            }).catch(function (e) {
+              api.setLoading(false);
+              LP.toast(e.message, 'error');
+            });
+          }
+        });
+      }
+    })();
+  </script>
+</body>
+</html>

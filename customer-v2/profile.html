@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>我的 · 兰瓶美业</title>
+  <link rel="stylesheet" href="../css/mobile-app.css" />
+  <link rel="stylesheet" href="../assets/css/lp-app.css" />
+  <link rel="stylesheet" href="../assets/css/polish-mobile.css" />
+  <style>
+    .p-hero{margin:0 0 14px;padding:24px 18px 26px;border-radius:0 0 24px 24px;color:#fff;
+      background:linear-gradient(150deg,#f291ad 0%,#e2587c 58%,#c9435f 100%);display:flex;align-items:center;gap:14px;}
+    .p-hero .av{width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,.24);
+      display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:600;}
+    .p-hero h2{margin:0;font-size:18px;font-weight:600;}
+    .p-hero p{margin:5px 0 0;font-size:12px;opacity:.9;}
+    .p-hero .lv{display:inline-block;margin-top:7px;font-size:11px;padding:2px 9px;border-radius:20px;background:rgba(255,255,255,.22);}
+    .kv-card{margin:0 16px 14px;background:#fff;border-radius:16px;padding:4px 16px;box-shadow:0 1px 2px rgba(24,28,40,.05);}
+    .kv-card .r{display:flex;justify-content:space-between;padding:13px 0;border-bottom:1px solid #f4f5f9;font-size:13.5px;}
+    .kv-card .r:last-child{border-bottom:0;}
+    .kv-card .k{color:#8b93a1;}
+    .kv-card .v{color:#1f2329;font-weight:500;}
+    .out{margin:18px 16px 0;width:calc(100% - 32px);height:46px;border-radius:13px;border:1px solid #f0d3db;
+      background:#fff;color:#d94b6d;font-size:14.5px;font-family:inherit;}
+  </style>
+</head>
+<body>
+  <div class="phone-page">
+    <div class="phone">
+      <div class="status-bar"><span>9:41</span><span>兰瓶</span><span>●●●</span></div>
+      <div class="phone-body" id="body">
+        <div class="st-load">加载中…</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../assets/js/lp-api.js"></script>
+  <script src="../assets/js/lp-mock.js?v=47"></script>
+  <script src="customer.js"></script>
+  <script>
+    (function () {
+      'use strict';
+      var me = {};
+
+      CUST.guard().then(function (u) {
+        me = u;
+        CUST.mountTab('mine');
+        render();
+        return LP.get('/api/customer/me').then(function (d) { me = d || me; render(); }).catch(function () { });
+      }).catch(function () { });
+
+      function render() {
+        var html = '<div class="p-hero"><div class="av">' + CUST.esc(String(me.name || '会').slice(0, 1)) + '</div>' +
+          '<div><h2>' + CUST.esc(me.name || '会员') + '</h2>' +
+          '<p>' + CUST.phone(me.phone) + '</p>' +
+          '<span class="lv">' + CUST.esc(me.level || '会员') + ' · ' + CUST.esc(me.store_name || '') + '</span></div></div>';
+
+        html += '<div class="kv-card">' +
+          '<div class="r"><span class="k">会员编号</span><span class="v">' + CUST.esc(me.code || '—') + '</span></div>' +
+          '<div class="r"><span class="k">剩余次数</span><span class="v">' + (me.remain || 0) + ' 次 / ' + (me.active_cards || 0) + ' 张卡</span></div>' +
+          '<div class="r"><span class="k">累计消费</span><span class="v">' + CUST.money(me.spent || 0) + '</span></div>' +
+          '<div class="r"><span class="k">到店次数</span><span class="v">' + (me.visit_count || 0) + ' 次</span></div>' +
+          '<div class="r"><span class="k">最近到店</span><span class="v">' + CUST.esc(me.last_visit || '—') + '</span></div>' +
+          '<div class="r"><span class="k">生日</span><span class="v">' + CUST.esc(me.birthday || '—') + '</span></div>' +
+          '</div>';
+
+        html += '<ul class="set-list">' +
+          '<li><a href="cards.html" style="display:flex;flex:1;justify-content:space-between;align-items:center;">我的卡项<span class="arrow">›</span></a></li>' +
+          '<li><a href="records.html" style="display:flex;flex:1;justify-content:space-between;align-items:center;">消费记录<span class="arrow">›</span></a></li>' +
+          '<li><a href="booking.html" style="display:flex;flex:1;justify-content:space-between;align-items:center;">在线预约<span class="arrow">›</span></a></li>' +
+          '<li><a href="member-qr.html" style="display:flex;flex:1;justify-content:space-between;align-items:center;">会员码<span class="arrow">›</span></a></li>' +
+          '<li><a href="projects.html" style="display:flex;flex:1;justify-content:space-between;align-items:center;">项目目录<span class="arrow">›</span></a></li>' +
+          '</ul>';
+
+        html += '<button class="out" id="btn-out">退出登录</button><div style="height:22px;"></div>';
+        CUST.body().innerHTML = html;
+
+        CUST.$('#btn-out').addEventListener('click', function () {
+          localStorage.removeItem('lp_token');
+          localStorage.removeItem('lp_user');
+          LP.toast('已退出登录');
+          setTimeout(function () { location.replace('login.html'); }, 500);
+        });
+      }
+    })();
+  </script>
+</body>
+</html>

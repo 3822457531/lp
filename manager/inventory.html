@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>出入库 · 兰瓶美业</title>
+  <link rel="stylesheet" href="../css/mobile-app.css" />
+  <link rel="stylesheet" href="../assets/css/lp-app.css" />
+  <style>
+    .list-card .info h4 { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .list-card .info p { word-break: break-word; }
+    .list-card .actions { flex-direction: column; align-items: flex-end; gap: 6px; }
+    .list-card .info p { margin: 2px 0; word-break: break-word; }
+    .list-card .info p b { color: var(--text); }
+    .list-card .info h4 .price { margin-left: auto; font-size: 15px; }
+    .list-card .actions { flex-wrap: wrap; }
+    .list-card .actions .btn-sm { min-height: 34px; line-height: 32px; padding: 0 14px; }
+  </style>
+<link rel="stylesheet" href="../assets/css/polish-mobile.css" />
+</head>
+<body>
+  <div class="phone-page">
+    <div class="phone">
+      <div class="status-bar" style="background:#f8a0b4;color:#fff;"><span>9:41</span><span>兰瓶</span><span>●●●</span></div>
+      <div class="phone-body">
+        <div class="nav-bar">
+          <a class="back" href="home.html">‹</a>
+          <h1>出入库</h1>
+          <span class="right" id="newOrder">+ 调度</span>
+        </div>
+
+        <div class="tabs-row" id="mainTabs">
+          <span class="active" data-tab="stock">库存</span>
+          <span data-tab="orders">单据</span>
+        </div>
+
+        <div class="section-hd" id="hd">本店库存 <span id="countHint">—</span></div>
+        <div id="list" style="padding-bottom:8px;"></div>
+      </div>
+
+      <nav class="tab-bar">
+        <a href="home.html"><span class="dot"></span>首页</a>
+        <a href="customers.html"><span class="dot"></span>客户</a>
+        <a href="verify.html"><span class="dot"></span>核销</a>
+        <a href="mine.html"><span class="dot"></span>我的</a>
+      </nav>
+    </div>
+  </div>
+
+  <script src="../assets/js/lp-api.js"></script>
+  <script src="../assets/js/lp-mock.js?v=47"></script>
+  <script>
+    (function () {
+      'use strict';
+      var me = null;
+      var tab = 'stock';
+      var orders = [];
+      var listEl = document.getElementById('list');
+
+      function stockRow(s) {
+        var qty = Number(s.qty || 0);
+        var tag = qty <= 3 ? LP.tag('库存紧张') : '';
+        return '<div class="list-card"><div class="row">' +
+          '<div class="info"><h4>' + LP.esc(s.item_name || '—') + tag + '</h4>' +
+          '<p>' + LP.esc(s.spec || '—') + '</p>' +
+          '<p style="font-size:12px;color:var(--text-2)">' + LP.esc(s.store_name || '') + '</p></div>' +
+          '<div class="actions"><span class="price">' + LP.esc(LP.fmt.num(qty)) + '</span>' +
+          '<span style="font-size:12px;color:var(--text-2)">' + LP.esc(s.unit || '件') + '</span></div></div></div>';
+      }
+
+      function orderCard(o) {
+        var isFrom = String(o.from_store_id) === String(me && me.store_id);
+        var isTo = String(o.to_store_id) === String(me && me.store_id);
+        var acts = [];
+        if (o.status === '待出库' && o.type === '门店调度' && isFrom) {
+          acts.push('<button class="btn-sm solid" data-ship="' + o.id + '">出库</button>');
+        }
+        if (o.status === '在途' && isTo) {
+          acts.push('<button class="btn-sm solid" data-receive="' + o.id + '">确认入库</button>');
+        }
+        if (o.status === '待出库' || o.status === '在途') {
+          acts.push('<button class="btn-sm ghost danger" data-cancel="' + o.id + '">取消</button>');
+        }
+        return '<div class="list-card">' +
+          '<div class="info"><h4>' + LP.esc(o.item_name || '—') + LP.tag(o.status || '') +
+          '<span class="price">×' + LP.esc(LP.fmt.num(o.qty || 0)) + '</span></h4>' +
+          '<p>类型：<b>' + LP.esc(o.type || '—') + '</b> · 规格 ' + LP.esc(o.spec || '—') + ' ' + LP.esc(o.unit || '') + '</p>' +
+          '<p>流向：' + LP.esc(o.from_name || '总部') + ' → ' + LP.esc(o.to_name || '—') + '</p>' +
+          '<p>发起：' + LP.esc(o.created_by_name || '—') + ' · ' + LP.esc(LP.fmt.datetime(o.created_at)) + '</p>' +
+          (o.received_at ? '<p>入库时间：' + LP.esc(LP.fmt.datetime(o.received_at)) + '</p>' : '') +
+          (o.remark ? '<p>备注：' + LP.esc(o.remark) + '</p>' : '') +
+          '</div>' + (acts.length ? '<div class="actions">' + acts.join('') + '</div>' : '') + '</div>';
+      }
+
+      function loadStock() {
+        document.getElementById('hd').innerHTML = '本店库存 <span id="countHint">—</span>';
+        listEl.innerHTML = LP.skeleton(4);
+        LP.get('/api/inventory/stock').then(function (arr) {
+          var rows = arr || [];
+          document.getElementById('countHint').textContent = rows.length + ' 项';
+          listEl.innerHTML = rows.length ? rows.map(stockRow).join('') : LP.empty('暂无库存数据');
+        }).catch(function (e) {
+          listEl.innerHTML = LP.empty('库存加载失败', '⚠');
+          LP.toast(e.message || '加载失败', 'error');
+        });
+      }
+
+      function loadOrders() {
+        document.getElementById('hd').innerHTML = '出入库单据 <span id="countHint">—</span>';
+        listEl.innerHTML = LP.skeleton(3);
+        LP.get('/api/inventory/orders').then(function (arr) {
+          orders = arr || [];
+          document.getElementById('countHint').textContent = orders.length + ' 单';
+          listEl.innerHTML = orders.length ? orders.map(orderCard).join('') : LP.empty('暂无出入库单据');
+        }).catch(function (e) {
+          listEl.innerHTML = LP.empty('单据加载失败', '⚠');
+          LP.toast(e.message || '加载失败', 'error');
+        });
+      }
+
+      function load() { return tab === 'stock' ? loadStock() : loadOrders(); }
+
+      function act(id, action, label) {
+        var o = orders.filter(function (x) { return String(x.id) === String(id); })[0] || {};
+        LP.confirm('确认' + label + '「' + (o.item_name || '') + ' ×' + (o.qty || 0) + '」？', { okText: label }).then(function (ok) {
+          if (!ok) return;
+          LP.post('/api/inventory/orders/' + id + '/' + action, {}).then(function () {
+            LP.toast(label + '成功', 'success');
+            load();
+          }).catch(function (e) { LP.toast(e.message || label + '失败', 'error'); });
+        });
+      }
+
+      function openCreate() {
+        Promise.all([LP.get('/api/stores'), LP.get('/api/inventory/items')]).then(function (r) {
+          var stores = (r[0] || []).filter(function (s) { return String(s.id) !== String(me.store_id); });
+          var items = r[1] || [];
+          if (!stores.length) { LP.toast('暂无可调拨门店', 'error'); return; }
+          if (!items.length) { LP.toast('暂无可调拨物料', 'error'); return; }
+          var m = LP.modal({
+            title: '新建门店调度',
+            okText: '提交调度',
+            width: 560,
+            body: '<div class="lp-form">' +
+              '<div class="lp-form-item"><label>出库门店</label><div class="pick-row"><span>' + LP.esc(me.store_name || '本店') + '</span></div></div>' +
+              '<div class="lp-form-item"><label>入库门店 <em>*</em></label><select class="lp-field" name="to">' +
+              stores.map(function (s) { return '<option value="' + s.id + '">' + LP.esc(s.name) + '</option>'; }).join('') + '</select></div>' +
+              '<div class="lp-form-item full"><label>物料 <em>*</em></label><select class="lp-field" name="item">' +
+              items.map(function (i) {
+                return '<option value="' + i.id + '">' + LP.esc(i.name + (i.spec ? ' / ' + i.spec : '') + '（本店 ' + (i.stock || 0) + (i.unit || '') + '）') + '</option>';
+              }).join('') + '</select></div>' +
+              '<div class="lp-form-item"><label>数量 <em>*</em></label><input class="lp-field" name="qty" type="number" step="1" min="1" value="1" /></div>' +
+              '<div class="lp-form-item"><label>备注</label><input class="lp-field" name="remark" type="text" placeholder="如：门店补货" /></div>' +
+              '</div>',
+            onOk: function (api) {
+              var to = api.body.querySelector('[name=to]').value;
+              var item = api.body.querySelector('[name=item]').value;
+              var qty = Number(api.body.querySelector('[name=qty]').value || 0);
+              var remark = api.body.querySelector('[name=remark]').value.trim();
+              if (!qty || qty < 1) return LP.toast('数量需 ≥ 1', 'error');
+              api.setLoading(true, '提交中…');
+              LP.post('/api/inventory/orders', {
+                type: '门店调度', from_store_id: Number(me.store_id), to_store_id: Number(to),
+                item_id: Number(item), qty: qty, remark: remark
+              }).then(function () {
+                api.close();
+                LP.toast('调度单已提交，待出库', 'success');
+                tab = 'orders';
+                LP.$$('#mainTabs span').forEach(function (x) { x.classList.toggle('active', x.getAttribute('data-tab') === 'orders'); });
+                load();
+              }).catch(function (e) { api.setLoading(false); LP.toast(e.message || '提交失败', 'error'); });
+            }
+          });
+          return m;
+        }).catch(function (e) { LP.toast(e.message || '数据加载失败', 'error'); });
+      }
+
+      listEl.addEventListener('click', function (e) {
+        var s = e.target.closest('[data-ship]');
+        var r = e.target.closest('[data-receive]');
+        var c = e.target.closest('[data-cancel]');
+        if (s) act(s.getAttribute('data-ship'), 'ship', '出库');
+        else if (r) act(r.getAttribute('data-receive'), 'receive', '确认入库');
+        else if (c) act(c.getAttribute('data-cancel'), 'cancel', '取消单据');
+      });
+
+      document.getElementById('mainTabs').addEventListener('click', function (e) {
+        var s = e.target.closest('span[data-tab]');
+        if (!s) return;
+        LP.$$('#mainTabs span').forEach(function (x) { x.classList.remove('active'); });
+        s.classList.add('active');
+        tab = s.getAttribute('data-tab');
+        load();
+      });
+
+      document.getElementById('newOrder').addEventListener('click', openCreate);
+
+      LP.requireRoles(['manager']).then(function (u) { me = u; load(); }).catch(function () {});
+    })();
+  </script>
+</body>
+</html>

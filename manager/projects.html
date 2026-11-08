@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>项目管理 · 兰瓶美业</title>
+  <link rel="stylesheet" href="../css/mobile-app.css" />
+  <link rel="stylesheet" href="../assets/css/lp-app.css" />
+  <style>
+    .list-card.row { align-items: flex-start; }
+    .pj-img { width: 58px; height: 58px; border-radius: 10px; object-fit: cover; flex: 0 0 auto; background: var(--pink-bg); }
+    .list-card .info h4 { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 14px; }
+    .list-card .info p { word-break: break-word; }
+    .list-card .actions { flex-direction: column; align-items: flex-end; gap: 4px; }
+    .tip-box { margin: 10px 14px 4px; padding: 10px 12px; border-radius: 10px; background: #fff8f0; color: #a06a1e; font-size: 12px; line-height: 1.6; }
+  </style>
+<link rel="stylesheet" href="../assets/css/polish-mobile.css" />
+</head>
+<body>
+  <div class="phone-page">
+    <div class="phone">
+      <div class="status-bar" style="background:#f8a0b4;color:#fff;"><span>9:41</span><span>兰瓶</span><span>●●●</span></div>
+      <div class="phone-body">
+        <div class="nav-bar">
+          <a class="back" href="home.html">‹</a>
+          <h1>项目管理</h1>
+          <span class="right" id="refresh">↻</span>
+        </div>
+
+        <div class="tip-box">项目由总部统一维护，门店端仅可查看，不能新增或修改价格。</div>
+
+        <div class="tabs-row" id="cats">
+          <span class="active" data-cat="">全部</span>
+        </div>
+
+        <div class="section-hd">项目列表 <span id="countHint">—</span></div>
+        <div id="list"></div>
+      </div>
+
+      <nav class="tab-bar">
+        <a href="home.html"><span class="dot"></span>首页</a>
+        <a href="customers.html"><span class="dot"></span>客户</a>
+        <a href="verify.html"><span class="dot"></span>核销</a>
+        <a href="mine.html"><span class="dot"></span>我的</a>
+      </nav>
+    </div>
+  </div>
+
+  <script src="../assets/js/lp-api.js"></script>
+  <script src="../assets/js/lp-mock.js?v=47"></script>
+  <script>
+    (function () {
+      'use strict';
+      var all = [];
+      var cat = '';
+      var listEl = document.getElementById('list');
+
+      function rowHtml(p) {
+        var img = p.image
+          ? '<img class="pj-img" src="../' + LP.esc(p.image) + '" alt="" onerror="this.style.visibility=\'hidden\'" />'
+          : '<div class="pj-img" style="display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--pink)">✦</div>';
+        return '<div class="list-card"><div class="row">' + img +
+          '<div class="info"><h4>' + LP.esc(p.name || '—') + LP.tag(p.category || '项目') + '</h4>' +
+          '<p>' + LP.esc(p.duration ? p.duration + ' 分钟' : '时长 —') + ' · 核销 ' + LP.esc(LP.fmt.num(p.verify_count || 0)) + ' 次</p>' +
+          '<p style="color:var(--text-2);font-size:12px;word-break:break-word;">' + LP.esc(p.description || '—') + '</p></div>' +
+          '<div class="actions"><span class="price">' + LP.esc(LP.fmt.money(p.price || 0)) + '</span>' +
+          '<span style="font-size:12px;color:var(--text-2)">会员 ' + LP.esc(LP.fmt.money(p.member_price || 0)) + '</span></div>' +
+          '</div></div>';
+      }
+
+      function paint() {
+        var rows = cat ? all.filter(function (p) { return (p.category || '') === cat; }) : all;
+        document.getElementById('countHint').textContent = rows.length + ' 个';
+        if (!rows.length) { listEl.innerHTML = LP.empty('暂无项目'); return; }
+        listEl.innerHTML = rows.map(rowHtml).join('');
+      }
+
+      function load() {
+        listEl.innerHTML = LP.skeleton(4);
+        LP.get('/api/projects').then(function (arr) {
+          all = arr || [];
+          var cats = [];
+          all.forEach(function (p) { if (p.category && cats.indexOf(p.category) < 0) cats.push(p.category); });
+          var box = document.getElementById('cats');
+          box.innerHTML = '<span class="active" data-cat="">全部</span>' + cats.map(function (c) {
+            return '<span data-cat="' + LP.esc(c) + '">' + LP.esc(c) + '</span>';
+          }).join('');
+          paint();
+        }).catch(function (e) {
+          listEl.innerHTML = LP.empty('项目加载失败', '⚠');
+          LP.toast(e.message || '加载失败', 'error');
+        });
+      }
+
+      document.getElementById('cats').addEventListener('click', function (e) {
+        var s = e.target.closest('span[data-cat]');
+        if (!s) return;
+        LP.$$('#cats span').forEach(function (x) { x.classList.remove('active'); });
+        s.classList.add('active');
+        cat = s.getAttribute('data-cat') || '';
+        paint();
+      });
+      document.getElementById('refresh').addEventListener('click', load);
+
+      LP.requireRoles(['manager']).then(function () { load(); }).catch(function () {});
+    })();
+  </script>
+</body>
+</html>

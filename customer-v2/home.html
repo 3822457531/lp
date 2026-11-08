@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>首页 · 兰瓶美业</title>
+  <link rel="stylesheet" href="../css/mobile-app.css" />
+  <link rel="stylesheet" href="../assets/css/lp-app.css" />
+  <link rel="stylesheet" href="../assets/css/polish-mobile.css" />
+  <style>
+    .m-hero{margin:0 0 14px;padding:20px 18px 22px;border-radius:0 0 24px 24px;color:#fff;
+      background:linear-gradient(150deg,#f291ad 0%,#e2587c 58%,#c9435f 100%);}
+    .m-hero .row1{display:flex;align-items:center;gap:12px;}
+    .m-hero .av{width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,.24);
+      display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:600;}
+    .m-hero h2{margin:0;font-size:17px;font-weight:600;}
+    .m-hero .lv{display:inline-block;margin-top:5px;font-size:11px;padding:2px 9px;border-radius:20px;
+      background:rgba(255,255,255,.22);}
+    .m-hero .nums{display:flex;margin-top:18px;}
+    .m-hero .nums .c{flex:1;text-align:center;}
+    .m-hero .nums .n{font-size:20px;font-weight:700;font-family:var(--font-num,inherit);}
+    .m-hero .nums .l{font-size:11px;opacity:.86;margin-top:2px;}
+    .m-next{margin:0 16px 14px;padding:13px 15px;border-radius:14px;background:#fff;
+      box-shadow:0 1px 2px rgba(24,28,40,.05);display:flex;align-items:center;gap:12px;}
+    .m-next .dot{width:8px;height:8px;border-radius:50%;background:#3aa675;flex:none;}
+    .m-next .t{flex:1;font-size:13px;color:#1f2329;}
+    .m-next .t small{display:block;color:#98a0ae;font-size:11.5px;margin-top:3px;}
+    .m-next .go{font-size:12px;color:#e2587c;}
+    .q-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:0 16px 6px;}
+    .q-grid a{background:#fff;border-radius:14px;padding:14px 6px;text-align:center;text-decoration:none;
+      box-shadow:0 1px 2px rgba(24,28,40,.05);color:#1f2329;}
+    .q-grid .ic{width:34px;height:34px;margin:0 auto 7px;border-radius:11px;display:flex;align-items:center;
+      justify-content:center;font-size:16px;background:#fdeef3;color:#e2587c;}
+    .q-grid .tx{font-size:11.5px;}
+    .prog{height:5px;border-radius:3px;background:#f1f2f6;margin-top:8px;overflow:hidden;}
+    .prog i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,#f2a3b8,#e2587c);}
+  </style>
+</head>
+<body>
+  <div class="phone-page">
+    <div class="phone">
+      <div class="status-bar"><span>9:41</span><span>兰瓶</span><span>●●●</span></div>
+      <div class="phone-body" id="body">
+        <div class="st-load">加载中…</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../assets/js/lp-api.js"></script>
+  <script src="../assets/js/lp-mock.js?v=47"></script>
+  <script src="customer.js"></script>
+  <script>
+    (function () {
+      'use strict';
+      CUST.guard().then(function () {
+        CUST.mountTab('home');
+        render();
+        return Promise.all([
+          LP.get('/api/customer/me'),
+          LP.get('/api/cards', { customer_id: (CUST.me() || {}).id }),
+          LP.get('/api/projects', { status: '上架', size: 3 })
+        ]).then(function (r) {
+          me = r[0] || {}; cards = r[1].list || r[1] || []; pjs = r[2].list || r[2] || [];
+          render();
+        }).catch(CUST.fail);
+      }).catch(function () { });
+
+      var me = {}, cards = [], pjs = [];
+
+      function render() {
+        var name = me.name || '会员';
+        var lv = me.level || '会员';
+        var html = '';
+
+        html += '<div class="m-hero"><div class="row1">' +
+          '<div class="av">' + CUST.esc(String(name).slice(0, 1)) + '</div>' +
+          '<div><h2>' + CUST.esc(name) + '，你好</h2><span class="lv">' + CUST.esc(lv) + '</span></div>' +
+          '</div><div class="nums">' +
+          '<div class="c"><div class="n">' + (me.remain || 0) + '</div><div class="l">剩余次数</div></div>' +
+          '<div class="c"><div class="n">' + (me.active_cards || 0) + '</div><div class="l">有效卡项</div></div>' +
+          '<div class="c"><div class="n">' + CUST.money(me.spent || 0) + '</div><div class="l">累计消费</div></div>' +
+          '</div></div>';
+
+        var na = me.next_appointment;
+        if (na) {
+          html += '<div class="m-next"><span class="dot"></span><div class="t">' +
+            CUST.esc(na.project_name || '预约') + ' · ' + CUST.esc(na.date || '') + ' ' + CUST.esc(na.start_time || na.time || '') +
+            '<small>' + CUST.esc(na.store_name || '') + (na.staff_name ? ' · ' + CUST.esc(na.staff_name) : '') + '</small>' +
+            '</div><a class="go" href="booking.html">改约 ›</a></div>';
+        } else {
+          html += '<div class="m-next"><span class="dot" style="background:#e2587c"></span>' +
+            '<div class="t">还没有预约<small>选个项目，到店直接做</small></div>' +
+            '<a class="go" href="booking.html">去预约 ›</a></div>';
+        }
+
+        html += '<div class="q-grid">' +
+          '<a href="cards.html"><div class="ic">▤</div><div class="tx">我的卡项</div></a>' +
+          '<a href="records.html"><div class="ic">≡</div><div class="tx">消费记录</div></a>' +
+          '<a href="booking.html"><div class="ic">＋</div><div class="tx">在线预约</div></a>' +
+          '<a href="member-qr.html"><div class="ic">▦</div><div class="tx">会员码</div></a>' +
+          '</div>';
+
+        html += '<div class="section-hd">我的项目 <a href="cards.html" style="font-size:12px;color:#98a0ae;">全部 ›</a></div>';
+        if (!cards.length) {
+          html += CUST.empty('暂无有效卡项，去项目里挑一个');
+        } else {
+          html += '<div class="list-card">';
+          cards.slice(0, 3).forEach(function (c) {
+            var used = Number(c.used_times) || 0, total = Number(c.total_times) || 1;
+            var pct = Math.max(0, Math.min(100, Math.round(used / total * 100)));
+            html += '<div class="row"><div class="info"><h4>' + CUST.esc(c.project_name) +
+              ' ' + CUST.tag(c.status) + '</h4>' +
+              '<p>剩余 ' + (total - used) + ' / ' + total + ' 次 · 有效期至 ' + CUST.esc(c.expire_at || '—') + '</p>' +
+              '<div class="prog"><i style="width:' + (100 - pct) + '%"></i></div></div></div>';
+          });
+          html += '</div>';
+        }
+
+        html += '<div class="section-hd">推荐项目 <a href="projects.html" style="font-size:12px;color:#98a0ae;">更多 ›</a></div>';
+        if (!pjs.length) {
+          html += CUST.empty('暂无在售项目');
+        } else {
+          html += '<div class="list-card">';
+          pjs.forEach(function (p) {
+            html += '<div class="row"><div class="info"><h4>' + CUST.esc(p.name) + '</h4>' +
+              '<p>' + CUST.esc(p.category || '') + ' · ' + (p.minutes || 60) + ' 分钟 · 会员价 ' +
+              CUST.money(p.member_price || p.price) + '</p></div>' +
+              '<div class="actions"><a class="btn-sm solid" href="booking.html?project=' + encodeURIComponent(p.id) + '">预约</a></div></div>';
+          });
+          html += '</div>';
+        }
+
+        html += '<div style="height:16px;"></div>';
+        CUST.body().innerHTML = html;
+      }
+    })();
+  </script>
+</body>
+</html>

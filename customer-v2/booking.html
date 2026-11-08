@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>在线预约 · 兰瓶美业</title>
+  <link rel="stylesheet" href="../css/mobile-app.css" />
+  <link rel="stylesheet" href="../assets/css/lp-app.css" />
+  <link rel="stylesheet" href="../assets/css/polish-mobile.css" />
+  <style>
+    .pick{margin:12px 16px;background:#fff;border-radius:16px;padding:14px 15px;box-shadow:0 1px 2px rgba(24,28,40,.05);}
+    .pick .hd{font-size:12px;color:#98a0ae;margin-bottom:10px;}
+    .chips{display:flex;flex-wrap:wrap;gap:8px;}
+    .chips span{padding:8px 13px;border-radius:11px;background:#f5f6fa;font-size:12.5px;color:#454b57;}
+    .chips span.on{background:#fdeef3;color:#e2587c;font-weight:600;box-shadow:inset 0 0 0 1px #f6c7d5;}
+    .chips span.dis{opacity:.4;}
+    .slot-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+    .slot-grid span{text-align:center;padding:9px 0;border-radius:10px;background:#f5f6fa;font-size:12.5px;color:#454b57;}
+    .slot-grid span.on{background:#e2587c;color:#fff;}
+    .foot-bar{position:sticky;bottom:0;margin-top:14px;padding:12px 16px 16px;background:linear-gradient(180deg,rgba(246,247,251,0),#f6f7fb 40%);}
+    .foot-bar .btn{width:100%;height:48px;border:0;border-radius:14px;color:#fff;font-size:15.5px;font-weight:600;
+      font-family:inherit;background:linear-gradient(135deg,#ec6f8e,#d94b6d);box-shadow:0 8px 18px rgba(217,75,109,.26);}
+    .foot-bar .btn[disabled]{background:#dfe1e8;box-shadow:none;}
+    .sum-line{margin:0 16px 4px;font-size:12px;color:#8b93a1;}
+  </style>
+</head>
+<body>
+  <div class="phone-page">
+    <div class="phone">
+      <div class="status-bar"><span>9:41</span><span>兰瓶</span><span>●●●</span></div>
+      <div class="phone-body" id="body">
+        <div class="st-load">加载中…</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../assets/js/lp-api.js"></script>
+  <script src="../assets/js/lp-mock.js?v=47"></script>
+  <script src="customer.js"></script>
+  <script>
+    (function () {
+      'use strict';
+      var stores = [], projects = [], sel = { store: '', project: '', date: '', time: '' };
+      var days = [], times = ['10:00', '11:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'];
+
+      CUST.guard().then(function () {
+        var qs = new URLSearchParams(location.search);
+        var pre = qs.get('project') || '';
+        buildDays();
+        render();
+        return Promise.all([LP.get('/api/stores'), LP.get('/api/projects', { status: '上架', size: 50 })])
+          .then(function (r) {
+            stores = r[0].list || r[0] || [];
+            projects = r[1].list || r[1] || [];
+            sel.store = (stores[0] || {}).id || '';
+            if (pre && projects.some(function (p) { return p.id === pre; })) sel.project = pre;
+            render();
+          }).catch(CUST.fail);
+      }).catch(function () { });
+
+      function buildDays() {
+        var names = ['日', '一', '二', '三', '四', '五', '六'];
+        for (var i = 0; i < 7; i++) {
+          var d = new Date(Date.now() + i * 86400000);
+          days.push({
+            v: d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'),
+            w: i === 0 ? '今天' : i === 1 ? '明天' : '周' + names[d.getDay()],
+            d: String(d.getDate()).padStart(2, '0') + '日'
+          });
+        }
+        sel.date = days[0].v;
+      }
+
+      function render() {
+        var html = CUST.nav('在线预约', 'home.html');
+
+        html += '<div class="pick"><div class="hd">1 · 选择门店</div><div class="chips">' +
+          stores.map(function (s) {
+            return '<span class="' + (s.id === sel.store ? 'on' : '') + '" data-k="store" data-v="' + s.id + '">' + CUST.esc(s.name) + '</span>';
+          }).join('') + '</div></div>';
+
+        html += '<div class="pick"><div class="hd">2 · 选择项目</div><div class="chips">' +
+          projects.map(function (p) {
+            return '<span class="' + (p.id === sel.project ? 'on' : '') + '" data-k="project" data-v="' + p.id + '">' +
+              CUST.esc(p.name) + '</span>';
+          }).join('') + '</div></div>';
+
+        html += '<div class="pick"><div class="hd">3 · 选择日期</div><div class="chips">' +
+          days.map(function (d) {
+            return '<span class="' + (d.v === sel.date ? 'on' : '') + '" data-k="date" data-v="' + d.v + '">' + d.w + ' ' + d.d + '</span>';
+          }).join('') + '</div></div>';
+
+        html += '<div class="pick"><div class="hd">4 · 选择时段</div><div class="slot-grid">' +
+          times.map(function (t) {
+            return '<span class="' + (t === sel.time ? 'on' : '') + '" data-k="time" data-v="' + t + '">' + t + '</span>';
+          }).join('') + '</div></div>';
+
+        var pj = projects.filter(function (p) { return p.id === sel.project; })[0];
+        if (pj) {
+          html += '<div class="sum-line">' + CUST.esc(pj.name) + ' · ' + (pj.minutes || 60) + ' 分钟 · 会员价 ' +
+            CUST.money(pj.member_price || pj.price) + '</div>';
+        }
+
+        html += '<div class="foot-bar"><button class="btn" id="btn-book" ' +
+          (sel.project && sel.time ? '' : 'disabled') + '>' +
+          (sel.project && sel.time ? '确认预约' : '请选择项目与时段') + '</button></div>';
+
+        CUST.body().innerHTML = html;
+        bind();
+      }
+
+      function bind() {
+        CUST.$$('[data-k]').forEach(function (el) {
+          el.addEventListener('click', function () {
+            sel[el.getAttribute('data-k')] = el.getAttribute('data-v');
+            render();
+          });
+        });
+        var btn = CUST.$('#btn-book');
+        if (btn) btn.addEventListener('click', submit);
+      }
+
+      function submit() {
+        var me = CUST.me() || {};
+        var pj = projects.filter(function (p) { return p.id === sel.project; })[0] || {};
+        var st = stores.filter(function (s) { return s.id === sel.store; })[0] || {};
+        var btn = CUST.$('#btn-book');
+        btn.disabled = true; btn.textContent = '提交中…';
+        LP.request('POST', '/api/appointments', {
+          customer_id: me.id, customer_name: me.name, customer_phone: me.phone,
+          project_id: pj.id, project_name: pj.name,
+          store_id: st.id, store_name: st.name,
+          date: sel.date, start_time: sel.time, time: sel.time,
+          source: '顾客端', status: '待确认'
+        }).then(function () {
+          LP.toast('预约已提交，门店会尽快确认');
+          setTimeout(function () { location.href = 'home.html'; }, 900);
+        }).catch(function (e) {
+          btn.disabled = false; btn.textContent = '确认预约';
+          LP.toast((e && e.message) || '提交失败', 'error');
+        });
+      }
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>消息提醒 · 兰瓶美业</title>
+  <link rel="stylesheet" href="../css/mobile-app.css" />
+  <link rel="stylesheet" href="../assets/css/lp-app.css" />
+  <link rel="stylesheet" href="staff.css" />
+<link rel="stylesheet" href="../assets/css/polish-mobile.css" />
+</head>
+<body>
+  <div class="phone-page">
+    <div class="phone">
+      <div class="status-bar"><span>9:41</span><span>●●●</span></div>
+      <div class="phone-body no-tab" id="body">
+        <div class="nav-bar"><a class="back" href="home.html">‹</a><h1>消息提醒</h1></div>
+        <div id="main"><div class="st-load">加载中…</div></div>
+        <div class="pad-bottom"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../assets/js/lp-api.js"></script>
+  <script src="../assets/js/lp-mock.js?v=47"></script>
+  <script src="staff.js"></script>
+  <script>
+    (function () {
+      'use strict';
+      var user = LP.user() || {};
+
+      STAFF.guard().then(function (me) {
+        user = me || user;
+        return Promise.all([
+          LP.get('/api/messages').catch(function () { return []; }),
+          LP.get('/api/customers/birthday/upcoming').catch(function () { return []; }),
+          LP.get('/api/workbench').catch(function () { return {}; })
+        ]);
+      }).then(function (res) {
+        render(res[0] || [], res[1] || [], (res[2] || {}).appointments || []);
+      }).catch(function (e) { STAFF.fail(e); });
+
+      function render(msgs, birthdays, appts) {
+        var html = '';
+        var count = 0;
+
+        html += '<div class="section-hd">门店消息</div>';
+        if (!msgs.length) {
+          html += '<div class="st-muted" style="padding:0 16px 12px;">暂无新的门店消息</div>';
+        } else {
+          count += msgs.length;
+          for (var i = 0; i < msgs.length; i++) {
+            var m = msgs[i];
+            var title = m.title || m.type || '门店通知';
+            var body = m.content || m.text || m.body || '';
+            var when = m.created_at || m.created || m.time || '';
+            html += '<div class="msg-item">' +
+              '<div class="m-ico">📢</div>' +
+              '<div class="m-main"><h4>' + STAFF.esc(title) +
+              '<span>' + STAFF.esc(when ? LP.fmt.ago(when) : '') + '</span></h4>' +
+              '<p>' + STAFF.esc(body || '—') + '</p></div></div>';
+          }
+        }
+
+        html += '<div class="section-hd">生日提醒</div>';
+        if (!birthdays.length) {
+          html += '<div class="st-muted" style="padding:0 16px 12px;">近期没有客户生日</div>';
+        } else {
+          count += birthdays.length;
+          for (var k = 0; k < birthdays.length; k++) {
+            var b = birthdays[k];
+            var dl = (b.days_left !== undefined && b.days_left !== null) ? Number(b.days_left) : STAFF.dayLeft(b.birthday);
+            html += '<div class="msg-item">' +
+              '<div class="m-ico">🎂</div>' +
+              '<div class="m-main"><h4>' + STAFF.esc(b.name || '客户') +
+              '<span>' + STAFF.esc(STAFF.birthdayText(dl)) + '</span></h4>' +
+              '<p>' + LP.fmt.phone(b.phone) + ' · ' + STAFF.esc(b.level || '—') +
+              (b.birthday_remind ? ' · 已开启生日提醒' : '') + '</p></div></div>';
+          }
+        }
+
+        html += '<div class="section-hd">预约提醒</div>';
+        if (!appts.length) {
+          html += '<div class="st-muted" style="padding:0 16px 12px;">暂无待服务预约</div>';
+        } else {
+          count += appts.length;
+          for (var j = 0; j < appts.length; j++) {
+            var a = appts[j];
+            var t = STAFF.dt(a.start_time);
+            html += '<div class="msg-item">' +
+              '<div class="m-ico">📅</div>' +
+              '<div class="m-main"><h4>' + STAFF.esc(a.customer_name || '客户') +
+              '<span>' + STAFF.esc(t.time) + '</span></h4>' +
+              '<p>' + STAFF.esc(t.date) + ' · ' + STAFF.esc(a.project_name || '项目待定') +
+              ' · ' + STAFF.esc(a.status || '') + '</p></div></div>';
+          }
+        }
+
+        if (!count) {
+          LP.mount('#main', STAFF.empty('暂无消息提醒', '🔔'));
+          return;
+        }
+        html += '<div style="padding:16px;text-align:center;" class="st-muted">共 ' + count + ' 条提醒</div>';
+        LP.mount('#main', html);
+      }
+    })();
+  </script>
+</body>
+</html>

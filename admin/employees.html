@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>员工管理 · 兰瓶管理后台</title>
+  <link rel="stylesheet" href="css/admin.css" />
+  <link rel="stylesheet" href="../assets/css/lp-app.css" />
+  <link rel="stylesheet" href="../assets/css/polish.css" />
+</head>
+<body data-page="employees">
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <div class="main">
+      <header class="topbar">
+        <div class="topbar-title">员工管理 <span>区分店长 / 普通员工，含本月业绩与提成参数</span></div>
+        <div class="topbar-actions" id="top-user"></div>
+      </header>
+      <div class="content">
+        <div class="stat-grid" style="grid-template-columns: repeat(3, 1fr);" id="stats"></div>
+
+        <div class="panel">
+          <div class="panel-hd">
+            <h3>员工列表</h3>
+            <button class="btn" id="btn-new">+ 新增员工</button>
+          </div>
+          <div class="panel-bd">
+            <div class="toolbar">
+              <input class="field search" id="f-q" placeholder="姓名 / 手机号" style="width:220px;" />
+              <select class="field" id="f-role" style="width:140px;">
+                <option value="">全部角色</option>
+                <option value="manager">店长</option>
+                <option value="staff">普通员工</option>
+                <option value="admin">管理员</option>
+              </select>
+              <select class="field" id="f-store" style="width:150px;"><option value="">全部门店</option></select>
+              <select class="field" id="f-status" style="width:140px;">
+                <option value="">在职与停用</option>
+                <option value="active">仅在职</option>
+                <option value="disabled">仅停用</option>
+              </select>
+              <button class="btn" id="btn-search">查询</button>
+            </div>
+          </div>
+          <div class="lp-scroll-x" id="list"></div>
+          <div class="pagination" id="count"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../assets/js/lp-api.js"></script>
+  <script src="../assets/js/lp-mock.js?v=47"></script>
+  <script src="js/layout.js"></script>
+  <script>
+  (function () {
+    'use strict';
+    var STORES = [];
+    var ROWS = [];
+
+    function err(e) { LP.toast((e && e.message) || '操作失败', 'error'); }
+
+    function storeOptions() {
+      return [{ value: '', label: '未分配门店' }].concat(STORES.map(function (s) {
+        return { value: s.id, label: s.name };
+      }));
+    }
+    function roleTag(r) {
+      if (r.role === 'admin') return '<span class="tag tag-brown">管理员</span>';
+      if (r.role === 'manager') return '<span class="tag tag-orange">店长</span>';
+      return '<span class="tag tag-blue">普通员工</span>';
+    }
+    function statusTag(r) {
+      if (r.status === 'disabled') return '<span class="tag tag-gray">停用</span>';
+      if (r.status === 'pending') return '<span class="tag tag-orange">待审核</span>';
+      return '<span class="tag tag-green">在职</span>';
+    }
+
+    function renderStats() {
+      var active = ROWS.filter(function (r) { return r.status === 'active'; });
+      var mgr = active.filter(function (r) { return r.role === 'manager'; });
+      document.getElementById('stats').innerHTML =
+        '<div class="stat-card"><div class="label">在职员工<span class="icon-box brown">👥</span></div>' +
+          '<div class="value">' + LP.fmt.num(active.length) + '</div>' +
+          '<div class="trend">店长 ' + mgr.length + ' · 员工 ' + (active.length - mgr.length) + '</div></div>' +
+        '<div class="stat-card"><div class="label">本月业绩合计<span class="icon-box green">¥</span></div>' +
+          '<div class="value">' + LP.fmt.money(active.reduce(function (a, b) { return a + (Number(b.month_perf) || 0); }, 0)) + '</div>' +
+          '<div class="trend">核销 ' + LP.fmt.num(active.reduce(function (a, b) { return a + (Number(b.month_verify) || 0); }, 0)) + ' 笔</div></div>' +
+        '<div class="stat-card"><div class="label">本月开卡合计<span class="icon-box orange">卡</span></div>' +
+          '<div class="value">' + LP.fmt.money(active.reduce(function (a, b) { return a + (Number(b.month_card) || 0); }, 0)) + '</div>' +
+          '<div class="trend"><a class="btn-link" href="audit.html">去审核注册 →</a></div></div>';
+    }
+
+    function renderList() {
+      LP.mount('#list', LP.table({
+        columns: [
+          { title: '员工', render: function (r) {
+              return '<div class="user-cell">' + LP.avatar(r.name, r.avatar ? '../' + String(r.avatar).replace(/^\.?\//, '') : '') +
+                '<div>' + LP.esc(r.name || '—') + '<br/><span class="meta">' + LP.esc(r.level || '—') + '</span></div></div>';
+          }},
+          { title: '手机号', render: function (r) { return LP.esc(LP.fmt.phone(r.phone)); } },
+          { title: '角色', render: roleTag },
+          { title: '岗位', render: function (r) { return LP.esc(r.position || '—'); } },
+          { title: '所属门店', render: function (r) { return LP.esc(r.store_name || '—'); } },
+          { title: '入职日期', render: function (r) { return LP.esc(LP.fmt.date(r.hire_date)); } },
+          { title: '本月业绩', cls: 'price', render: function (r) { return LP.fmt.money(r.month_perf); } },
+          { title: '核销', render: function (r) { return LP.fmt.num(r.month_verify) + ' 笔'; } },
+          { title: '开卡', cls: 'price', render: function (r) { return LP.fmt.money(r.month_card); } },
+          { title: '状态', render: statusTag },
+          { title: '操作', render: function (r) {
+              var toggle = r.status === 'disabled'
+                ? '<a class="btn-link" data-act="enable" data-id="' + r.id + '">启用</a>'
+                : '<a class="btn-link danger" data-act="disable" data-id="' + r.id + '">停用</a>';
+              return '<span class="ops">' +
+                '<a class="btn-link" data-act="detail" data-id="' + r.id + '">详情</a>' +
+                '<a class="btn-link" data-act="edit" data-id="' + r.id + '">编辑</a>' + toggle + '</span>';
+          }}
+        ],
+        rows: ROWS,
+        emptyText: '没有匹配的员工'
+      }));
+      LP.mount('#count', '<span>共 ' + ROWS.length + ' 位员工</span>');
+    }
+
+    function load() {
+      LP.mount('#list', '<div style="padding:18px;">' + LP.skeleton(5) + '</div>');
+      LP.get('/api/users', {
+        q: document.getElementById('f-q').value.trim(),
+        role: document.getElementById('f-role').value,
+        store_id: document.getElementById('f-store').value,
+        status: document.getElementById('f-status').value,
+        pageSize: 200
+      }).then(function (list) {
+        ROWS = (list || []).filter(function (r) { return r.status !== 'pending'; });
+        renderStats();
+        renderList();
+      }).catch(function (e) {
+        err(e);
+        LP.mount('#list', LP.empty('员工数据加载失败'));
+      });
+    }
+
+    function openForm(row) {
+      row = row || {};
+      var editing = !!row.id;
+      var fields = [
+        { name: 'name', label: '姓名', required: true, value: row.name || '' },
+        { name: 'phone', label: '手机号', type: 'tel', required: true, value: row.phone || '' }
+      ];
+      if (!editing) fields.push({ name: 'password', label: '初始密码', value: '123456', hint: '默认 123456，可登录后修改' });
+      fields = fields.concat([
+        { name: 'role', label: '角色', type: 'select', options: [{ value: 'staff', label: '普通员工' }, { value: 'manager', label: '店长' }, { value: 'admin', label: '管理员' }], value: row.role || 'staff' },
+        { name: 'store_id', label: '所属门店', type: 'select', options: storeOptions(), value: row.store_id === undefined || row.store_id === null ? '' : row.store_id },
+        { name: 'position', label: '岗位', value: row.position || '美容师', placeholder: '店长 / 美容师 / 前台收银…' },
+        { name: 'level', label: '职级', type: 'select', options: ['P2', 'P3', 'P4', 'M1', 'M2'], value: row.level || 'P2' },
+        { name: 'base_salary', label: '基本工资', type: 'number', value: row.base_salary === undefined ? 4500 : row.base_salary },
+        { name: 'commission_rate', label: '项目提成率', type: 'number', step: '0.01', value: row.commission_rate === undefined ? 0.05 : row.commission_rate, hint: '0.05 = 5%' },
+        { name: 'card_rate', label: '开卡提成率', type: 'number', step: '0.01', value: row.card_rate === undefined ? 0.02 : row.card_rate, hint: '0.02 = 2%' },
+        { name: 'hire_date', label: '入职日期', type: 'date', value: row.hire_date || LP.today() },
+        { name: 'note', label: '备注', type: 'textarea', full: true, value: row.note || '' }
+      ]);
+
+      LP.formModal({
+        title: editing ? '编辑员工' : '新增员工',
+        fields: fields,
+        okText: editing ? '保存' : '创建',
+        onSubmit: function (out) {
+          var body = {
+            name: out.name, phone: out.phone, role: out.role, store_id: out.store_id || null,
+            position: out.position, level: out.level,
+            base_salary: Number(out.base_salary) || 0,
+            commission_rate: Number(out.commission_rate) || 0,
+            card_rate: Number(out.card_rate) || 0,
+            hire_date: out.hire_date, note: out.note
+          };
+          if (editing) body.status = row.status || 'active';
+          else body.password = out.password || '123456';
+          var p = editing ? LP.put('/api/users/' + row.id, body) : LP.post('/api/users', body);
+          return p.then(function () {
+            LP.toast(editing ? '员工信息已更新' : '员工已创建', 'success');
+            load();
+          });
+        }
+      });
+    }
+
+    function toggleStatus(row, next) {
+      var label = next === 'active' ? '启用' : '停用';
+      LP.confirm('确定' + label + '员工「' + (row.name || '') + '」？' + (next === 'disabled' ? '停用后该账号无法登录。' : ''),
+        { danger: next === 'disabled', okText: label }).then(function (ok) {
+        if (!ok) return;
+        var body = Object.assign({}, row, { status: next });
+        return LP.put('/api/users/' + row.id, body).then(function () {
+          LP.toast('已' + label, 'success');
+          load();
+        });
+      }).catch(err);
+    }
+
+    function detail(id) {
+      LP.modal({
+        title: '员工详情',
+        body: LP.skeleton(6),
+        footer: null,
+        width: 760,
+        onMount: function (api) {
+          LP.get('/api/users/' + id).then(function (u) {
+            var head =
+              '<div style="display:grid;grid-template-columns:1fr auto;gap:16px;align-items:start;margin-bottom:16px;">' +
+              '<div><div style="font-size:17px;font-weight:650;">' + LP.esc(u.name || '—') + ' ' + roleTag(u) + '</div>' +
+              '<div style="font-size:13px;color:#67707f;margin-top:6px;">' + LP.esc(LP.fmt.phone(u.phone)) + ' · ' +
+              LP.esc(u.position || '—') + ' · ' + LP.esc(u.level || '—') + '</div>' +
+              '<div style="font-size:13px;color:#67707f;margin-top:4px;">门店：' + LP.esc(u.store_name || '—') +
+              ' · 入职：' + LP.esc(LP.fmt.date(u.hire_date)) + '</div>' +
+              '<div style="font-size:13px;color:#67707f;margin-top:4px;">基本工资 ' + LP.fmt.money(u.base_salary) +
+              ' · 提成 ' + LP.fmt.pct(Number(u.commission_rate || 0) * 100, 0) +
+              ' · 开卡 ' + LP.fmt.pct(Number(u.card_rate || 0) * 100, 0) + '</div></div>' +
+              '<div style="text-align:right;"><div style="font-size:12px;color:#9aa3b2;">本月业绩</div>' +
+              '<div style="font-size:22px;font-weight:650;color:#7f6455;">' + LP.fmt.money(u.month_perf) + '</div>' +
+              '<div style="font-size:12px;color:#9aa3b2;margin-top:4px;">核销 ' + LP.fmt.num(u.month_verify) +
+              ' 笔 · 开卡 ' + LP.fmt.money(u.month_card) + '</div></div></div>';
+
+            var att = LP.table({
+              columns: [
+                { title: '日期', render: function (r) { return LP.esc(LP.fmt.date(r.date)); } },
+                { title: '上班', render: function (r) { return LP.esc(r.check_in || '—'); } },
+                { title: '下班', render: function (r) { return LP.esc(r.check_out || '—'); } },
+                { title: '方式', render: function (r) { return LP.esc(r.method || '—'); } },
+                { title: '状态', render: function (r) { return LP.tag(r.status || '—'); } }
+              ],
+              rows: (u.attendance || []).slice(0, 8),
+              emptyText: '暂无出勤记录'
+            });
+
+            api.body.innerHTML = head +
+              '<div style="border:1px solid #eceef4;border-radius:12px;overflow:hidden;">' +
+              '<div style="padding:12px 16px;border-bottom:1px solid #eceef4;font-size:13.5px;font-weight:600;">近期出勤</div>' +
+              '<div class="lp-scroll-x">' + att + '</div></div>';
+          }).catch(function (e) {
+            err(e);
+            api.body.innerHTML = LP.empty('员工详情加载失败');
+          });
+        }
+      });
+    }
+
+    function init(me) {
+      document.dispatchEvent(new CustomEvent('lp:user', { detail: me }));
+      LP.get('/api/stores').then(function (list) {
+        STORES = (list || []).filter(function (s) { return s.status !== '停业'; });
+        document.getElementById('f-store').innerHTML = '<option value="">全部门店</option>' + STORES.map(function (s) {
+          return '<option value="' + s.id + '">' + LP.esc(s.name) + '</option>';
+        }).join('');
+      }).catch(err).then(load);
+
+      document.getElementById('btn-search').addEventListener('click', load);
+      document.getElementById('f-q').addEventListener('input', LP.debounce(load, 400));
+      ['f-role', 'f-store', 'f-status'].forEach(function (id) {
+        document.getElementById(id).addEventListener('change', load);
+      });
+      document.getElementById('btn-new').addEventListener('click', function () { openForm(null); });
+
+      LP.on(document, 'click', '[data-act="detail"]', function (e, t) { detail(t.getAttribute('data-id')); });
+      LP.on(document, 'click', '[data-act="edit"]', function (e, t) {
+        var id = t.getAttribute('data-id');
+        openForm(ROWS.filter(function (r) { return String(r.id) === String(id); })[0] || { id: id });
+      });
+      LP.on(document, 'click', '[data-act="disable"]', function (e, t) {
+        var row = ROWS.filter(function (r) { return String(r.id) === String(t.getAttribute('data-id')); })[0];
+        if (row) toggleStatus(row, 'disabled');
+      });
+      LP.on(document, 'click', '[data-act="enable"]', function (e, t) {
+        var row = ROWS.filter(function (r) { return String(r.id) === String(t.getAttribute('data-id')); })[0];
+        if (row) toggleStatus(row, 'active');
+      });
+    }
+
+    LP.requireRoles(['admin']).then(init).catch(function () {});
+  })();
+  </script>
+</body>
+</html>

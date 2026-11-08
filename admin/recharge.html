@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>充值开卡 · 兰瓶管理后台</title>
+  <link rel="stylesheet" href="css/admin.css" />
+  <link rel="stylesheet" href="../assets/css/lp-app.css" />
+  <link rel="stylesheet" href="../assets/css/polish.css" />
+</head>
+<body data-page="recharge">
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <div class="main">
+      <header class="topbar">
+        <div class="topbar-title">充值开卡 <span>开卡记录与实收统计</span></div>
+        <div class="topbar-actions" id="top-user"></div>
+      </header>
+      <div class="content">
+        <div class="stat-grid" style="grid-template-columns: repeat(3, 1fr);" id="stats"></div>
+
+        <div class="panel">
+          <div class="panel-hd">
+            <h3>开卡记录</h3>
+            <button class="btn" id="btn-new">+ 新增开卡</button>
+          </div>
+          <div class="panel-bd">
+            <div class="toolbar">
+              <input class="field search" id="f-q" placeholder="客户 / 卡号 / 项目" style="width:260px;" />
+              <select class="field" id="f-store" style="width:150px;"><option value="">全部门店</option></select>
+              <button class="btn" id="btn-search">查询</button>
+            </div>
+          </div>
+          <div class="lp-scroll-x" id="list"></div>
+          <div class="pagination" id="count"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../assets/js/lp-api.js"></script>
+  <script src="../assets/js/lp-mock.js?v=47"></script>
+  <script src="js/layout.js"></script>
+  <script>
+  (function () {
+    'use strict';
+    var STORES = [];
+    var CUSTOMERS = [];
+    var PROJECTS = [];
+    var ROWS = [];
+    var SUM = { amount: 0, total: 0 };
+
+    function err(e) { LP.toast((e && e.message) || '操作失败', 'error'); }
+
+    function renderStats() {
+      var avg = SUM.total ? SUM.amount / SUM.total : 0;
+      document.getElementById('stats').innerHTML =
+        '<div class="stat-card"><div class="label">开卡笔数<span class="icon-box brown">卡</span></div>' +
+          '<div class="value">' + LP.fmt.num(SUM.total) + '</div><div class="trend">当前筛选条件</div></div>' +
+        '<div class="stat-card"><div class="label">开卡金额<span class="icon-box green">¥</span></div>' +
+          '<div class="value">' + LP.fmt.money(SUM.amount) + '</div><div class="trend">实付合计</div></div>' +
+        '<div class="stat-card"><div class="label">客单价<span class="icon-box orange">≈</span></div>' +
+          '<div class="value">' + LP.fmt.money(avg) + '</div><div class="trend">金额 / 笔数</div></div>';
+    }
+
+    function renderList() {
+      LP.mount('#list', LP.table({
+        columns: [
+          { title: '开卡日期', render: function (r) { return LP.esc(LP.fmt.date(r.start_date || r.created_at)); } },
+          { title: '客户', render: function (r) {
+              return LP.esc(r.customer_name || '—') + '<br/><span class="meta">' + LP.esc(LP.fmt.phone(r.customer_phone)) + '</span>';
+          }},
+          { title: '项目', render: function (r) { return LP.esc(r.project_name || '—'); } },
+          { title: '卡号', render: function (r) { return '<span class="meta">' + LP.esc(r.card_no || '—') + '</span>'; } },
+          { title: '次数', render: function (r) { return LP.fmt.num(r.used_times) + ' / ' + LP.fmt.num(r.total_times); } },
+          { title: '金额', cls: 'price', render: function (r) { return LP.fmt.money(r.amount); } },
+          { title: '实付', cls: 'price', render: function (r) { return LP.fmt.money(r.paid_amount === undefined ? r.amount : r.paid_amount); } },
+          { title: '门店', render: function (r) { return LP.esc(r.store_name || '—'); } },
+          { title: '到期', render: function (r) { return LP.esc(LP.fmt.date(r.expire_at)); } },
+          { title: '状态', render: function (r) { return LP.tag(r.status || '生效中'); } }
+        ],
+        rows: ROWS,
+        emptyText: '没有匹配的开卡记录'
+      }));
+      LP.mount('#count', '<span>共 ' + ROWS.length + ' 条记录</span>');
+    }
+
+    function load() {
+      LP.mount('#list', '<div style="padding:18px;">' + LP.skeleton(6) + '</div>');
+      LP.get('/api/cards', {
+        q: document.getElementById('f-q').value.trim(),
+        store_id: document.getElementById('f-store').value,
+        pageSize: 300
+      }).then(function (d) {
+        ROWS = (d && d.list) || d || [];
+        SUM.total = Number(d && d.total) || ROWS.length;
+        SUM.amount = Number(d && d.amount) || ROWS.reduce(function (a, b) { return a + (Number(b.amount) || 0); }, 0);
+        renderStats();
+        renderList();
+      }).catch(function (e) {
+        err(e);
+        LP.mount('#list', LP.empty('开卡记录加载失败'));
+      });
+    }
+
+    function openForm() {
+      LP.formModal({
+        title: '新增开卡',
+        okText: '确认开卡',
+        fields: [
+          { name: 'customer_id', label: '客户', type: 'select', options: CUSTOMERS.map(function (c) {
+              return { value: c.id, label: c.name + '（' + LP.fmt.phone(c.phone) + '）' };
+            }), required: true },
+          { name: 'project_id', label: '项目', type: 'select', options: PROJECTS.filter(function (p) { return p.status === '启用'; }).map(function (p) {
+              return { value: p.id, label: p.name + ' · ' + LP.fmt.money(p.price) };
+            }), required: true },
+          { name: 'total_times', label: '次数', type: 'number', value: 10, required: true },
+          { name: 'paid_amount', label: '实付金额', type: 'number', placeholder: '留空等于标准金额', value: '' }
+        ],
+        onSubmit: function (out) {
+          var body = {
+            customer_id: out.customer_id,
+            project_id: out.project_id,
+            total_times: Number(out.total_times) || 10
+          };
+          if (out.paid_amount !== '' && out.paid_amount !== undefined) body.paid_amount = Number(out.paid_amount);
+          return LP.post('/api/cards', body).then(function () {
+            LP.toast('开卡成功', 'success');
+            load();
+          });
+        }
+      });
+    }
+
+    function init(me) {
+      document.dispatchEvent(new CustomEvent('lp:user', { detail: me }));
+      Promise.all([
+        LP.get('/api/stores').catch(function () { return []; }),
+        LP.get('/api/customers', { pageSize: 500 }).catch(function () { return []; }),
+        LP.get('/api/projects').catch(function () { return []; })
+      ]).then(function (arr) {
+        STORES = (arr[0] || []).filter(function (s) { return s.status !== '停业'; });
+        CUSTOMERS = (arr[1] && arr[1].list) || arr[1] || [];
+        PROJECTS = arr[2] || [];
+        document.getElementById('f-store').innerHTML = '<option value="">全部门店</option>' + STORES.map(function (s) {
+          return '<option value="' + s.id + '">' + LP.esc(s.name) + '</option>';
+        }).join('');
+        load();
+      });
+
+      document.getElementById('btn-search').addEventListener('click', load);
+      document.getElementById('f-q').addEventListener('input', LP.debounce(load, 400));
+      document.getElementById('f-store').addEventListener('change', load);
+      document.getElementById('btn-new').addEventListener('click', openForm);
+    }
+
+    LP.requireRoles(['admin']).then(init).catch(function () {});
+  })();
+  </script>
+</body>
+</html>

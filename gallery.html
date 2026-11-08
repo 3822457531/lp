@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>gallery</title>
+<style>
+  html,body{margin:0;padding:0;background:#f2f3f7;font:12px/1.4 -apple-system,"Microsoft YaHei",sans-serif;}
+  #wrap{display:flex;flex-wrap:wrap;gap:6px;padding:6px;}
+  .cell{background:#fff;border:1px solid #dfe3ec;border-radius:6px;overflow:hidden;position:relative;}
+  .cell .cap{position:absolute;left:0;right:0;bottom:0;background:rgba(20,22,30,.72);color:#fff;font-size:10px;padding:2px 4px;z-index:3;}
+  .cell .inner{overflow:hidden;position:relative;}
+  .cell iframe{border:0;position:absolute;left:0;top:0;transform-origin:0 0;}
+</style>
+</head>
+<body>
+<div id="wrap"></div>
+<script>
+(function () {
+  var q = new URLSearchParams(location.search);
+  var list = (q.get('list') || 'admin/dashboard.html').split(',');
+  var y = parseInt(q.get('y') || '0', 10);
+  var scale = parseFloat(q.get('scale') || '0.45');
+  var w = parseInt(q.get('w') || '375', 10);
+  var vh = parseInt(q.get('vh') || '760', 10);
+  var wrap = document.getElementById('wrap');
+  var reset = q.get('reset') === '1';
+  var extra = q.get('extra') || '';
+  list.forEach(function (u) {
+    var add = [];
+    if (reset) add.push('mock=reset');
+    if (extra) add.push(extra);
+    if (add.length) u += (u.indexOf('?') >= 0 ? '&' : '?') + add.join('&');
+    var cell = document.createElement('div');
+    cell.className = 'cell';
+    cell.style.width = Math.round(w * scale) + 'px';
+    cell.style.height = Math.round(vh * scale) + 'px';
+    var inner = document.createElement('div');
+    inner.className = 'inner';
+    inner.style.width = cell.style.width;
+    inner.style.height = cell.style.height;
+    var f = document.createElement('iframe');
+    f.src = u;
+    f.style.width = w + 'px';
+    f.style.height = '2200px';
+    f.style.transform = 'scale(' + scale + ') translateY(-' + y + 'px)';
+    inner.appendChild(f);
+    var cap = document.createElement('div');
+    cap.className = 'cap';
+    cap.textContent = u;
+    cell.appendChild(inner);
+    cell.appendChild(cap);
+    wrap.appendChild(cell);
+  });
+})();
+</script>
+</body>
+</html>

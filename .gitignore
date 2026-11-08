@@ -1,0 +1,13 @@
+# 依赖（本项目零构建、零依赖，预留）
+node_modules/
+
+# 日志
+*.log
+
+# 系统文件
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# 测试截图产物
+tests/shots/

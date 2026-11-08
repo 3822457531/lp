@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>客户 · 兰瓶美业</title>
+  <link rel="stylesheet" href="../css/mobile-app.css" />
+  <link rel="stylesheet" href="../assets/css/lp-app.css" />
+  <link rel="stylesheet" href="staff.css" />
+<link rel="stylesheet" href="../assets/css/polish-mobile.css" />
+</head>
+<body>
+  <div class="phone-page">
+    <div class="phone">
+      <div class="status-bar"><span>9:41</span><span>●●●</span></div>
+      <div class="phone-body" id="body">
+        <div class="st-load">加载中…</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../assets/js/lp-api.js"></script>
+  <script src="../assets/js/lp-mock.js?v=47"></script>
+  <script src="staff.js"></script>
+  <script>
+    (function () {
+      'use strict';
+      var all = [], kw = '', level = '';
+
+      STAFF.guard().then(function () {
+        STAFF.mountTab('customers');
+        shell();
+        return search('');
+      }).catch(function () { });
+
+      function shell() {
+        STAFF.body().innerHTML =
+          '<div class="staff-top"><div class="brand">客户管理</div>' +
+          '<span class="st-muted" id="total">共 0 位</span></div>' +
+          '<div class="search-row"><div class="search-box">' +
+          '<input id="kw" type="search" placeholder="搜索姓名 / 手机号" autocomplete="off" />' +
+          '</div></div>' +
+          '<div id="chips"></div>' +
+          '<div id="list"></div>' +
+          '<div class="pad-bottom"></div>';
+
+        var timer = null;
+        LP.$('#kw').addEventListener('input', function () {
+          var v = this.value.trim();
+          clearTimeout(timer);
+          timer = setTimeout(function () { kw = v; search(v); }, 300);
+        });
+        LP.on('#chips', 'click', '.chip', function () {
+          level = this.getAttribute('data-v') || '';
+          renderChips();
+          renderList();
+        });
+        LP.on('#list', 'click', '.row', function (e) {
+          var id = Number(this.getAttribute('data-cust'));
+          if (e.target.closest('[data-verify]')) {
+            location.href = 'verify-step1.html?customer_id=' + id;
+            return;
+          }
+          openDetail(id);
+        });
+      }
+
+      function search(q) {
+        LP.mount('#list', '<div class="st-load">搜索中…</div>');
+        return LP.get('/api/customers', { q: q || '' }).then(function (d) {
+          all = (d && d.list) || [];
+          LP.mount('#total', '共 ' + all.length + ' 位');
+          renderChips();
+          renderList();
+        }).catch(function (e) {
+          LP.mount('#list', '<div class="st-err">' + STAFF.esc(e.message) + '</div>');
+        });
+      }
+
+      function renderChips() {
+        var lv = ['全部'];
+        for (var i = 0; i < all.length; i++) {
+          var l = all[i].level;
+          if (l && lv.indexOf(l) < 0) lv.push(l);
+        }
+        var list = lv.map(function (v) { return [v === '全部' ? '' : v, v]; });
+        LP.mount('#chips', STAFF.chips(list, level, 'v'));
+      }
+
+      function renderList() {
+        var rows = all.filter(function (c) { return !level || c.level === level; });
+        if (!rows.length) {
+          LP.mount('#list', STAFF.empty(kw ? '没有匹配的客户' : '暂无客户', '👤'));
+          return;
+        }
+        var html = '<div class="list-card">';
+        for (var i = 0; i < rows.length; i++) {
+          var c = rows[i];
+          html += '<div class="row" data-cust="' + c.id + '">' +
+            '<div class="av">' + (c.avatar ? '<img src="' + STAFF.esc(STAFF.img(c.avatar)) + '" alt="" />' : STAFF.esc(String(c.name || '客').slice(-1))) + '</div>' +
+            '<div class="info"><h4>' + STAFF.esc(c.name || '—') +
+            (c.level ? '<span class="tag tag-pink" style="margin-left:6px;">' + STAFF.esc(c.level) + '</span>' : '') + '</h4>' +
+            '<p>' + LP.fmt.phone(c.phone) + ' · 卡项 ' + (c.active_cards || 0) + ' · 到店 ' + (c.visit_count || 0) + '</p></div>' +
+            '<div class="row-acts"><button class="btn-sm solid" data-verify="' + c.id + '">核销</button></div>' +
+            '</div>';
+        }
+        html += '</div>';
+        LP.mount('#list', html);
+      }
+
+      function openDetail(id) {
+        var m = LP.modal({ title: '客户详情', body: '<div class="st-load">加载中…</div>', footer: null, width: 360 });
+        LP.get('/api/customers/' + id).then(function (c) {
+          var cards = (c.cards || []);
+          var ver = (c.verifications || []).slice(0, 8);
+          var h = '<div class="picked-card" style="margin:0 0 12px;">' +
+            '<div class="av">' + (c.avatar ? '<img src="' + STAFF.esc(STAFF.img(c.avatar)) + '" alt="" />' : STAFF.esc(String(c.name || '客').slice(-1))) + '</div>' +
+            '<div class="info"><h4>' + STAFF.esc(c.name || '—') + '</h4>' +
+            '<p>' + LP.fmt.phone(c.phone) + ' · ' + STAFF.esc(c.level || '—') + ' · 到店 ' + (c.visit_count || 0) + ' 次</p></div></div>';
+
+          h += '<div class="kv"><span class="k">累计消费</span><span class="v red">' + STAFF.money(c.total_spend || 0) + '</span></div>' +
+            '<div class="kv"><span class="k">最近到店</span><span class="v">' + (c.last_visit ? LP.fmt.date(c.last_visit) : '—') + '</span></div>' +
+            '<div class="kv"><span class="k">生日</span><span class="v">' + STAFF.esc(c.birthday || '—') + '</span></div>' +
+            '<div class="kv"><span class="k">所属门店</span><span class="v">' + STAFF.esc(c.store_name || '—') + '</span></div>';
+
+          h += '<div class="group-hd" style="padding-left:0;">卡项（' + cards.length + '）</div>';
+          if (!cards.length) {
+            h += '<div class="st-muted">暂无卡项</div>';
+          } else {
+            for (var i = 0; i < cards.length; i++) {
+              var cd = cards[i];
+              var left = STAFF.left(cd);
+              h += '<div class="check-item" style="cursor:default;">' +
+                '<div class="info"><h4>' + STAFF.esc(cd.project_name || '卡项') +
+                '<span class="tag ' + STAFF.tagClass(cd.status) + '" style="margin-left:6px;">' + STAFF.esc(cd.status || '—') + '</span></h4>' +
+                '<p>剩余 ' + left + ' / ' + (cd.total_times || 0) + ' 次 · 单价 ' + STAFF.money(STAFF.unit(cd)) + '</p></div>' +
+                (left > 0 ? '<button class="btn-sm solid" data-card="' + cd.id + '">去核销</button>' : '') +
+                '</div>';
+            }
+          }
+
+          h += '<div class="group-hd" style="padding-left:0;">核销记录</div>';
+          if (!ver.length) {
+            h += '<div class="st-muted">暂无核销记录</div>';
+          } else {
+            for (var k = 0; k < ver.length; k++) {
+              var v = ver[k];
+              var its = STAFF.items(v.items).map(function (x) {
+                return (x.name || '项目') + ' ×' + (x.times || 1);
+              }).join('、');
+              h += '<div class="kv"><span class="k">' + LP.fmt.date(v.created_at) + '</span>' +
+                '<span class="v">' + STAFF.esc(its || '—') +
+                '<span class="tag ' + STAFF.tagClass(v.status) + '" style="margin-left:6px;">' + STAFF.esc(v.status || '—') + '</span></span></div>';
+            }
+          }
+          m.body.innerHTML = h;
+          m.body.addEventListener('click', function (e) {
+            if (e.target.closest('[data-card]') || e.target.closest('.btn-sm')) {
+              m.close();
+              location.href = 'verify-step1.html?customer_id=' + id;
+            }
+          });
+        }).catch(function (e) {
+          m.body.innerHTML = '<div class="st-err">' + STAFF.esc(e.message) + '</div>';
+        });
+      }
+    })();
+  </script>
+</body>
+</html>

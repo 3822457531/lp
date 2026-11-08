@@ -1,0 +1,1656 @@
+{
+  "generatedAt": "2026-11-05T07:36:31.563Z",
+  "durationMs": 6657,
+  "total": 262,
+  "pass": 262,
+  "fail": 0,
+  "groups": {
+    "0 基础工具": {
+      "pass": 3,
+      "fail": 0
+    },
+    "1 种子数据": {
+      "pass": 25,
+      "fail": 0
+    },
+    "2 列表接口": {
+      "pass": 58,
+      "fail": 0
+    },
+    "3 客户 CRUD": {
+      "pass": 14,
+      "fail": 0
+    },
+    "4 项目 CRUD": {
+      "pass": 8,
+      "fail": 0
+    },
+    "5 开卡·核销链路": {
+      "pass": 14,
+      "fail": 0
+    },
+    "6 预约 CRUD": {
+      "pass": 8,
+      "fail": 0
+    },
+    "7 审核流程": {
+      "pass": 10,
+      "fail": 0
+    },
+    "8 薪资": {
+      "pass": 15,
+      "fail": 0
+    },
+    "9 考核": {
+      "pass": 8,
+      "fail": 0
+    },
+    "10 福利": {
+      "pass": 8,
+      "fail": 0
+    },
+    "11 库存": {
+      "pass": 8,
+      "fail": 0
+    },
+    "12 考勤": {
+      "pass": 6,
+      "fail": 0
+    },
+    "13 看板聚合": {
+      "pass": 20,
+      "fail": 0
+    },
+    "14 设置与消息": {
+      "pass": 13,
+      "fail": 0
+    },
+    "15 会话与权限": {
+      "pass": 13,
+      "fail": 0
+    },
+    "17 顾客端": {
+      "pass": 20,
+      "fail": 0
+    },
+    "16 边界与异常": {
+      "pass": 11,
+      "fail": 0
+    }
+  },
+  "failures": [],
+  "all": [
+    {
+      "group": "0 基础工具",
+      "name": "HTML 转义 < > & \"",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "0 基础工具",
+      "name": "金额格式化带千分位与符号",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "0 基础工具",
+      "name": "金额 0 显示 ¥0",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "1 种子数据",
+      "name": "门店 3 家",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "1 种子数据",
+      "name": "员工 8 人",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "1 种子数据",
+      "name": "项目 8 个",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "1 种子数据",
+      "name": "客户 40 人",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "1 种子数据",
+      "name": "卡 30 张",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "1 种子数据",
+      "name": "核销 180 条",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "1 种子数据",
+      "name": "预约 24 条",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "1 种子数据",
+      "name": "待审申请 5 条",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "1 种子数据",
+      "name": "考核 8 条",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "1 种子数据",
+      "name": "薪资记录 24 条（3 月×8 人）",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "1 种子数据",
+      "name": "福利 3 项",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "1 种子数据",
+      "name": "短信 12 条",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "1 种子数据",
+      "name": "消息中心 8 条",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "1 种子数据",
+      "name": "库存 6 项",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "1 种子数据",
+      "name": "库存单据 8 条",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "1 种子数据",
+      "name": "员工门店外键都存在",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "1 种子数据",
+      "name": "员工状态只用 active/disabled",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "1 种子数据",
+      "name": "卡客户外键都存在",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "1 种子数据",
+      "name": "卡金额 = 单价 × 次数（允许涨价前数据）",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "1 种子数据",
+      "name": "核销记录都带 items 明细",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "1 种子数据",
+      "name": "核销时间格式合法",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "1 种子数据",
+      "name": "核销金额非负",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "1 种子数据",
+      "name": "客户手机号 11 位",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "1 种子数据",
+      "name": "薪资记录带 user_name 且不带 user_id",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "1 种子数据",
+      "name": "考核记录带 name/weight/target",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "2 列表接口",
+      "name": "列表 客户 非空",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "2 列表接口",
+      "name": "列表 客户 每条都有 id",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "2 列表接口",
+      "name": "列表 客户 返回结构合法",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "2 列表接口",
+      "name": "列表 员工 非空",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "2 列表接口",
+      "name": "列表 员工 每条都有 id",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "2 列表接口",
+      "name": "列表 员工 返回结构合法",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "2 列表接口",
+      "name": "列表 项目 非空",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "2 列表接口",
+      "name": "列表 项目 每条都有 id",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "2 列表接口",
+      "name": "列表 项目 返回结构合法",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "2 列表接口",
+      "name": "列表 卡 非空",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "2 列表接口",
+      "name": "列表 卡 每条都有 id",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "2 列表接口",
+      "name": "列表 卡 返回结构合法",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "2 列表接口",
+      "name": "列表 核销 非空",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "2 列表接口",
+      "name": "列表 核销 每条都有 id",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "2 列表接口",
+      "name": "列表 核销 返回结构合法",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "2 列表接口",
+      "name": "列表 预约 非空",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "2 列表接口",
+      "name": "列表 预约 每条都有 id",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "2 列表接口",
+      "name": "列表 预约 返回结构合法",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "2 列表接口",
+      "name": "列表 审核 非空",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "2 列表接口",
+      "name": "列表 审核 每条都有 id",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "2 列表接口",
+      "name": "列表 审核 返回结构合法",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "2 列表接口",
+      "name": "列表 考核 非空",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "2 列表接口",
+      "name": "列表 考核 每条都有 id",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "2 列表接口",
+      "name": "列表 考核 返回结构合法",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "2 列表接口",
+      "name": "列表 库存 非空",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "2 列表接口",
+      "name": "列表 库存 每条都有 id",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "2 列表接口",
+      "name": "列表 库存 返回结构合法",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "2 列表接口",
+      "name": "列表 库存单据 非空",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "2 列表接口",
+      "name": "列表 库存单据 每条都有 id",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "2 列表接口",
+      "name": "列表 库存单据 返回结构合法",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "2 列表接口",
+      "name": "列表 福利 非空",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "2 列表接口",
+      "name": "列表 福利 每条都有 id",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "2 列表接口",
+      "name": "列表 福利 返回结构合法",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "2 列表接口",
+      "name": "列表 短信 非空",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "2 列表接口",
+      "name": "列表 短信 每条都有 id",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "2 列表接口",
+      "name": "列表 短信 返回结构合法",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "2 列表接口",
+      "name": "列表 门店 非空",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "2 列表接口",
+      "name": "列表 门店 每条都有 id",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "2 列表接口",
+      "name": "列表 门店 返回结构合法",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "2 列表接口",
+      "name": "分页 pageSize=10 长度",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "2 列表接口",
+      "name": "分页 total = 客户总数",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "2 列表接口",
+      "name": "分页 pageSize=10 返回 10 条且 total 完整",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "2 列表接口",
+      "name": "分页 pageSize=20 长度",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "2 列表接口",
+      "name": "分页 pageSize=20 返回 20 条",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "2 列表接口",
+      "name": "第 2 页无重复",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "2 列表接口",
+      "name": "分页第 2 页与第 1 页不重复",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "2 列表接口",
+      "name": "搜索结果包含目标客户",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "2 列表接口",
+      "name": "客户按关键词搜索（姓名）",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "2 列表接口",
+      "name": "筛选结果全部为钻石会员",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "2 列表接口",
+      "name": "客户按等级筛选",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "2 列表接口",
+      "name": "筛选结果全部属于 st1",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "2 列表接口",
+      "name": "客户按门店筛选",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "2 列表接口",
+      "name": "筛选结果全部待核销",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "2 列表接口",
+      "name": "核销按状态筛选",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "2 列表接口",
+      "name": "筛选结果全部为 staff",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "2 列表接口",
+      "name": "员工按角色筛选",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "2 列表接口",
+      "name": "空关键词返回全部客户",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "2 列表接口",
+      "name": "空关键词返回全量",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "3 客户 CRUD",
+      "name": "返回新客户 id",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "3 客户 CRUD",
+      "name": "客户数 +1",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "3 客户 CRUD",
+      "name": "新增客户",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "3 客户 CRUD",
+      "name": "按手机号能搜到",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "3 客户 CRUD",
+      "name": "新增客户后可查询到",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "3 客户 CRUD",
+      "name": "姓名已更新",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "3 客户 CRUD",
+      "name": "等级已更新",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "3 客户 CRUD",
+      "name": "修改客户姓名与等级",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "3 客户 CRUD",
+      "name": "库中已不存在",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "3 客户 CRUD",
+      "name": "删除客户并从列表移除",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "3 客户 CRUD",
+      "name": "13 位数字被拒",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "3 客户 CRUD",
+      "name": "字母被拒",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "3 客户 CRUD",
+      "name": "合法号码通过",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "3 客户 CRUD",
+      "name": "手机号重复/非法在页面层拦截（规则校验）",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "4 项目 CRUD",
+      "name": "返回 id 与默认上架状态",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "4 项目 CRUD",
+      "name": "新增项目",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "4 项目 CRUD",
+      "name": "列表含新项目",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "4 项目 CRUD",
+      "name": "项目出现在列表",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "4 项目 CRUD",
+      "name": "价格已更新",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "4 项目 CRUD",
+      "name": "修改价格",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "4 项目 CRUD",
+      "name": "状态变下架",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "4 项目 CRUD",
+      "name": "下架项目",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "5 开卡·核销链路",
+      "name": "客户已创建",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "5 开卡·核销链路",
+      "name": "新建客户用于开卡",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "5 开卡·核销链路",
+      "name": "返回卡 id",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "5 开卡·核销链路",
+      "name": "卡已记录客户",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "5 开卡·核销链路",
+      "name": "开卡（充值开卡页）",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "5 开卡·核销链路",
+      "name": "核销记录已生成",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "5 开卡·核销链路",
+      "name": "核销总数 +1",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "5 开卡·核销链路",
+      "name": "核销 POST 生成待核销记录",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "5 开卡·核销链路",
+      "name": "状态变已完成",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "5 开卡·核销链路",
+      "name": "核销 PUT 置为已完成",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "5 开卡·核销链路",
+      "name": "状态变已退次",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "5 开卡·核销链路",
+      "name": "补退次（PUT 状态 已退次）",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "5 开卡·核销链路",
+      "name": "列表金额 = Σ(单价×次数)",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "5 开卡·核销链路",
+      "name": "核销金额与明细一致性",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "6 预约 CRUD",
+      "name": "默认状态为待确认",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "6 预约 CRUD",
+      "name": "新建预约",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "6 预约 CRUD",
+      "name": "状态变已确认",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "6 预约 CRUD",
+      "name": "确认预约",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "6 预约 CRUD",
+      "name": "状态变已完成",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "6 预约 CRUD",
+      "name": "标记到店完成",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "6 预约 CRUD",
+      "name": "状态变已取消",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "6 预约 CRUD",
+      "name": "取消预约",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "7 审核流程",
+      "name": "存在待审数据",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "7 审核流程",
+      "name": "状态变已通过",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "7 审核流程",
+      "name": "通过一条待审申请",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "7 审核流程",
+      "name": "状态变已驳回",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "7 审核流程",
+      "name": "驳回理由已保存",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "7 审核流程",
+      "name": "驳回一条待审申请并记录理由",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "7 审核流程",
+      "name": "子路由生效",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "7 审核流程",
+      "name": "审核通过/驳回子路由（approve/reject）",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "7 审核流程",
+      "name": "待审数量 <= 初始 5",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "7 审核流程",
+      "name": "待审数量随处理递减",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "8 薪资",
+      "name": "当月 8 条记录",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "8 薪资",
+      "name": "薪资记录按月筛选",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "8 薪资",
+      "name": "字段 staff_name 存在",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "8 薪资",
+      "name": "字段 base_salary 存在",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "8 薪资",
+      "name": "字段 perf_commission 存在",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "8 薪资",
+      "name": "字段 card_commission 存在",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "8 薪资",
+      "name": "字段 total 存在",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "8 薪资",
+      "name": "字段 status 存在",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "8 薪资",
+      "name": "薪资记录字段齐全",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "8 薪资",
+      "name": "第 1 条应发合计",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "8 薪资",
+      "name": "应发合计 = 底薪+提成+全勤-扣款",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "8 薪资",
+      "name": "状态变已发放",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "8 薪资",
+      "name": "批量发放（PUT 状态 已发放）",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "8 薪资",
+      "name": "规则含提成比例",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "8 薪资",
+      "name": "薪资规则读写",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "9 考核",
+      "name": "返回 id",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "9 考核",
+      "name": "新增考核项",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "9 考核",
+      "name": "目标值已更新",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "9 考核",
+      "name": "修改考核项目标值",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "9 考核",
+      "name": "库中已移除",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "9 考核",
+      "name": "删除考核项",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "9 考核",
+      "name": "返回结果集",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "9 考核",
+      "name": "考核结果接口可用",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "10 福利",
+      "name": "返回 id",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "10 福利",
+      "name": "新增福利",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "10 福利",
+      "name": "发放记录 +1",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "10 福利",
+      "name": "发放福利生成记录",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "10 福利",
+      "name": "库中已移除",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "10 福利",
+      "name": "删除福利",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "10 福利",
+      "name": "返回发放记录",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "10 福利",
+      "name": "发放记录列表可用",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "11 库存",
+      "name": "有库存项",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "11 库存",
+      "name": "每项有数量字段",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "11 库存",
+      "name": "库存列表带库存量",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "11 库存",
+      "name": "单据已生成",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "11 库存",
+      "name": "单据数 +1",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "11 库存",
+      "name": "新建入库单",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "11 库存",
+      "name": "状态变已完成",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "11 库存",
+      "name": "单据默认待确认并可确认",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "12 考勤",
+      "name": "返回对象或空对象",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "12 考勤",
+      "name": "今日考勤接口可用",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "12 考勤",
+      "name": "考勤记录数不减少",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "12 考勤",
+      "name": "打卡写入记录",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "12 考勤",
+      "name": "返回 summary 数组",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "12 考勤",
+      "name": "考勤汇总含 days",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "13 看板聚合",
+      "name": "指标 revenue 存在",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "13 看板聚合",
+      "name": "指标 card_amount 存在",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "13 看板聚合",
+      "name": "指标 verify_amount 存在",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "13 看板聚合",
+      "name": "指标 verify_count 存在",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "13 看板聚合",
+      "name": "指标 new_customers 存在",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "13 看板聚合",
+      "name": "指标 pending_verify 存在",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "13 看板聚合",
+      "name": "指标 pending_audit 存在",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "13 看板聚合",
+      "name": "指标 customer_total 存在",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "13 看板聚合",
+      "name": "指标 staff_total 存在",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "13 看板聚合",
+      "name": "看板返回 9 个关键指标",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "13 看板聚合",
+      "name": "营收口径",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "13 看板聚合",
+      "name": "营收 = 开卡 + 核销（区间内）",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "13 看板聚合",
+      "name": "trend 为 7 项",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "13 看板聚合",
+      "name": "趋势数组 7 天且合计一致",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "13 看板聚合",
+      "name": "占比合计",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "13 看板聚合",
+      "name": "项目占比合计接近核销金额",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "13 看板聚合",
+      "name": "排行金额从大到小",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "13 看板聚合",
+      "name": "员工排行降序",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "13 看板聚合",
+      "name": "门店客户数合计 = 客户总数",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "13 看板聚合",
+      "name": "门店口径：各店客户数与总数一致",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "14 设置与消息",
+      "name": "返回设置对象",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "14 设置与消息",
+      "name": "读取设置",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "14 设置与消息",
+      "name": "品牌名已更新",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "14 设置与消息",
+      "name": "已写入 localStorage",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "14 设置与消息",
+      "name": "修改设置并持久化",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "14 设置与消息",
+      "name": "返回短信列表",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "14 设置与消息",
+      "name": "短信记录可读",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "14 设置与消息",
+      "name": "短信数不减少",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "14 设置与消息",
+      "name": "发短信接口可写",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "14 设置与消息",
+      "name": "返回消息列表",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "14 设置与消息",
+      "name": "消息中心可读",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "14 设置与消息",
+      "name": "生日列表字段含 days_left 或 date",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "14 设置与消息",
+      "name": "近期生日接口只返回 7 天内",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "15 会话与权限",
+      "name": "存在登录用户",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "15 会话与权限",
+      "name": "角色 admin",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "15 会话与权限",
+      "name": "当前登录用户为超管",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "15 会话与权限",
+      "name": "切到李静",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "15 会话与权限",
+      "name": "角色 manager",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "15 会话与权限",
+      "name": "切换身份：店长",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "15 会话与权限",
+      "name": "切到陈晓",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "15 会话与权限",
+      "name": "角色 staff",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "15 会话与权限",
+      "name": "切换身份：员工",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "15 会话与权限",
+      "name": "角色 admin",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "15 会话与权限",
+      "name": "切回超管",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "15 会话与权限",
+      "name": "工作台有本月业绩字段",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "15 会话与权限",
+      "name": "工作台接口按角色返回",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "17 顾客端",
+      "name": "登录返回 token",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "17 顾客端",
+      "name": "登录后角色=customer",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "17 顾客端",
+      "name": "登录用户=该手机号会员",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "17 顾客端",
+      "name": "我的：姓名与会员一致",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "17 顾客端",
+      "name": "我的：含等级",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "17 顾客端",
+      "name": "我的：含剩余次数 remain",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "17 顾客端",
+      "name": "我的：remain 与卡项扣减一致",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "17 顾客端",
+      "name": "我的：含核销笔数",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "17 顾客端",
+      "name": "卡项列表非空",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "17 顾客端",
+      "name": "卡项均属该会员",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "17 顾客端",
+      "name": "卡项剩余次数不超总数",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "17 顾客端",
+      "name": "消费记录均属该会员",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "17 顾客端",
+      "name": "消费记录含金额与时间",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "17 顾客端",
+      "name": "预约：新增后总数 +1",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "17 顾客端",
+      "name": "预约：默认状态 待确认",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "17 顾客端",
+      "name": "预约：来源记录为顾客端",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "17 顾客端",
+      "name": "我的预约只返回本人",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "17 顾客端",
+      "name": "我的预约包含刚提交的那条",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "17 顾客端",
+      "name": "跨会员卡项数据隔离",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "17 顾客端",
+      "name": "未登录可读项目目录",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "16 边界与异常",
+      "name": "结果为空",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "16 边界与异常",
+      "name": "查询不存在的客户返回空而非崩溃",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "16 边界与异常",
+      "name": "无 NaN 金额",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "16 边界与异常",
+      "name": "空字符串不产生 NaN 金额",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "16 边界与异常",
+      "name": "超范围返回空",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "16 边界与异常",
+      "name": "分页超出范围返回空数组",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "16 边界与异常",
+      "name": "两次开卡各生成一条",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "16 边界与异常",
+      "name": "重复点击开卡不会破坏数据",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "16 边界与异常",
+      "name": "客户回到 40",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "16 边界与异常",
+      "name": "核销回到 180",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "group": "16 边界与异常",
+      "name": "reset 后数据回到初始量",
+      "pass": true,
+      "detail": ""
+    }
+  ]
+}

@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>会员码 · 兰瓶美业</title>
+  <link rel="stylesheet" href="../css/mobile-app.css" />
+  <link rel="stylesheet" href="../assets/css/lp-app.css" />
+  <link rel="stylesheet" href="../assets/css/polish-mobile.css" />
+  <style>
+    .qr-wrap{margin:16px;background:#fff;border-radius:20px;padding:24px 18px 20px;text-align:center;
+      box-shadow:0 8px 24px rgba(24,28,40,.07);}
+    .qr-wrap h3{margin:0 0 4px;font-size:16px;}
+    .qr-wrap .sub{font-size:12px;color:#98a0ae;margin-bottom:18px;}
+    .qr{width:196px;height:196px;margin:0 auto;border-radius:14px;background:#fff;border:1px solid #eef0f5;
+      display:grid;grid-template-columns:repeat(21,1fr);grid-template-rows:repeat(21,1fr);padding:8px;gap:0;}
+    .qr i{background:transparent;}
+    .qr i.on{background:#1f2329;}
+    .qr .corner{background:#1f2329;}
+    .code{margin-top:16px;font-family:var(--font-num,inherit);font-size:15px;letter-spacing:2px;color:#1f2329;}
+    .code small{display:block;font-family:inherit;font-size:11px;letter-spacing:0;color:#98a0ae;margin-top:5px;}
+    .tip{margin:0 16px;padding:12px 14px;border-radius:13px;background:#fdeef3;color:#a8435f;font-size:12px;line-height:1.7;}
+  </style>
+</head>
+<body>
+  <div class="phone-page">
+    <div class="phone">
+      <div class="status-bar"><span>9:41</span><span>兰瓶</span><span>●●●</span></div>
+      <div class="phone-body" id="body">
+        <div class="st-load">加载中…</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../assets/js/lp-api.js"></script>
+  <script src="../assets/js/lp-mock.js?v=47"></script>
+  <script src="customer.js"></script>
+  <script>
+    (function () {
+      'use strict';
+      var me = {}, cards = [];
+
+      CUST.guard().then(function (u) {
+        me = u; render();
+        return Promise.all([
+          LP.get('/api/customer/me'),
+          LP.get('/api/cards', { customer_id: u.id, size: 50 })
+        ]).then(function (r) {
+          me = r[0] || me; cards = r[1].list || r[1] || [];
+          render();
+        }).catch(function () { });
+      }).catch(function () { });
+
+      /* 用卡号做稳定散列，画一个 21×21 的占位码（演示用，不是真二维码） */
+      function grid(seed) {
+        var s = 0;
+        for (var i = 0; i < seed.length; i++) s = (s * 31 + seed.charCodeAt(i)) % 2147483647;
+        var cells = '', n = 21;
+        for (var y = 0; y < n; y++) {
+          for (var x = 0; x < n; x++) {
+            var corner = (x < 7 && y < 7) || (x > n - 8 && y < 7) || (x < 7 && y > n - 8);
+            if (corner) {
+              var edge = (x === 0 || x === 6 || y === 0 || y === 6 || x === n - 1 || x === n - 7 || y === n - 1 || y === n - 7);
+              var inner = (x >= 2 && x <= 4 && y >= 2 && y <= 4) ||
+                (x >= n - 5 && x <= n - 3 && y >= 2 && y <= 4) ||
+                (x >= 2 && x <= 4 && y >= n - 5 && y <= n - 3);
+              cells += '<i class="' + (edge || inner ? 'on' : '') + '"></i>';
+            } else {
+              s = (s * 1103515245 + 12345) % 2147483647;
+              cells += '<i class="' + (s % 100 > 48 ? 'on' : '') + '"></i>';
+            }
+          }
+        }
+        return cells;
+      }
+
+      function render() {
+        var no = me.code || 'LP00000000';
+        var html = CUST.nav('会员码', 'home.html');
+        html += '<div class="qr-wrap"><h3>' + CUST.esc(me.name || '会员') + '</h3>' +
+          '<div class="sub">到店出示会员码，前台扫码核销</div>' +
+          '<div class="qr">' + grid(no) + '</div>' +
+          '<div class="code">' + CUST.esc(no) + '<small>' + CUST.esc(me.level || '会员') + ' · 剩余 ' + (me.remain || 0) + ' 次</small></div>' +
+          '</div>';
+        if (cards.length) {
+          html += '<div class="list-card">';
+          cards.slice(0, 3).forEach(function (c) {
+            html += '<div class="row"><div class="info"><h4>' + CUST.esc(c.project_name) + '</h4>' +
+              '<p>剩余 ' + (Number(c.total_times) - Number(c.used_times)) + ' 次 · 至 ' + CUST.esc(c.expire_at || '—') + '</p></div></div>';
+          });
+          html += '</div>';
+        }
+        html += '<div class="tip">演示说明：此码为占位图形，正式版由后端签发一次性 token 并生成可扫码的核销二维码（对应员工端「核销三步」第 3 步）。</div>';
+        html += '<div style="height:16px;"></div>';
+        CUST.body().innerHTML = html;
+      }
+    })();
+  </script>
+</body>
+</html>

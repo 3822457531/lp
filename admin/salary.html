@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>薪资情况 · 兰瓶管理后台</title>
+  <link rel="stylesheet" href="css/admin.css" />
+  <link rel="stylesheet" href="../assets/css/lp-app.css" />
+  <link rel="stylesheet" href="../assets/css/polish.css" />
+</head>
+<body data-page="salary">
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <div class="main">
+      <header class="topbar">
+        <div class="topbar-title">薪资情况 <span>底薪 + 提成 + 全勤奖 − 缺勤扣款</span></div>
+        <div class="topbar-actions" id="top-user"></div>
+      </header>
+      <div class="content">
+        <div class="toolbar" style="margin-bottom:16px;">
+          <input class="field" type="month" id="f-month" style="width:160px;" />
+          <select class="field" id="f-store" style="width:150px;"><option value="">全部门店</option></select>
+          <button class="btn" id="btn-query">重新核算</button>
+          <button class="btn ghost" id="btn-pay">批量发放</button>
+        </div>
+
+        <div class="stat-grid" style="grid-template-columns: repeat(4, 1fr);" id="stats"></div>
+
+        <div class="panel">
+          <div class="panel-hd">
+            <h3>薪资明细</h3>
+            <span style="font-size:12px;color:#9aa3b2;">公式：底薪 + 业绩提成（5%）+ 开卡提成（2%）+ 全勤 500 − 缺勤 150/天</span>
+          </div>
+          <div class="lp-scroll-x" id="list"></div>
+          <div class="pagination" id="count"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-hd"><h3>出勤汇总</h3><span style="font-size:12px;color:#9aa3b2;">本月</span></div>
+          <div class="lp-scroll-x" id="attend"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../assets/js/lp-api.js"></script>
+  <script src="../assets/js/lp-mock.js?v=47"></script>
+  <script src="js/layout.js"></script>
+  <script>
+  (function () {
+    'use strict';
+    var ROWS = [];
+    var STORES = [];
+
+    function err(e) { LP.toast((e && e.message) || '操作失败', 'error'); }
+    function num(v) { return Number(v) || 0; }
+
+    function renderStats() {
+      var total = ROWS.reduce(function (a, b) { return a + num(b.total); }, 0);
+      var paid = ROWS.filter(function (r) { return r.status === '已发放'; });
+      document.getElementById('stats').innerHTML =
+        '<div class="stat-card"><div class="label">应发合计<span class="icon-box brown">¥</span></div>' +
+          '<div class="value">' + LP.fmt.money(total) + '</div><div class="trend">' + ROWS.length + ' 人</div></div>' +
+        '<div class="stat-card"><div class="label">已发放<span class="icon-box green">✓</span></div>' +
+          '<div class="value">' + LP.fmt.money(paid.reduce(function (a, b) { return a + num(b.total); }, 0)) + '</div>' +
+          '<div class="trend">' + paid.length + ' 人 / 发放率 ' + (ROWS.length ? Math.round(paid.length / ROWS.length * 100) : 0) + '%</div></div>' +
+        '<div class="stat-card"><div class="label">待发放人数<span class="icon-box orange">⏳</span></div>' +
+          '<div class="value">' + (ROWS.length - paid.length) + '</div><div class="trend">未确认发放</div></div>' +
+        '<div class="stat-card"><div class="label">人均工资<span class="icon-box blue">≈</span></div>' +
+          '<div class="value">' + LP.fmt.money(ROWS.length ? total / ROWS.length : 0) + '</div><div class="trend">当月平均</div></div>';
+    }
+
+    function renderList() {
+      LP.mount('#list', LP.table({
+        columns: [
+          { title: '员工', render: function (r) {
+              return '<div class="user-cell">' + LP.avatar(r.user_name || '—') +
+                '<div>' + LP.esc(r.user_name || '—') + '<br/><span class="meta">' + LP.esc(r.store_name || '—') + '</span></div></div>';
+          }},
+          { title: '出勤', render: function (r) { return LP.fmt.num(r.attendance_days || 0) + ' 天'; } },
+          { title: '底薪', cls: 'price', render: function (r) { return LP.fmt.money(r.base); } },
+          { title: '业绩提成', cls: 'price', render: function (r) { return LP.fmt.money(r.perf_commission); } },
+          { title: '开卡提成', cls: 'price', render: function (r) { return LP.fmt.money(r.card_commission); } },
+          { title: '全勤', cls: 'price', render: function (r) { return LP.fmt.money(r.bonus); } },
+          { title: '扣款', cls: 'price', render: function (r) { return num(r.deduction) ? '<span style="color:#cf2c4e;">-' + LP.fmt.money(r.deduction) + '</span>' : '—'; } },
+          { title: '应发合计', cls: 'price', render: function (r) { return '<b>' + LP.fmt.money(r.total) + '</b>'; } },
+          { title: '状态', render: function (r) {
+              return r.status === '已发放' ? '<span class="tag tag-green">已发放</span>' : '<span class="tag tag-orange">待发放</span>';
+          }},
+          { title: '操作', render: function (r) {
+              if (r.status === '已发放') return '<span class="ops"><a class="btn-link" data-act="detail" data-id="' + r.id + '">明细</a></span>';
+              return '<span class="ops"><a class="btn-link" data-act="pay" data-id="' + r.id + '">发放</a>' +
+                '<a class="btn-link" data-act="detail" data-id="' + r.id + '">明细</a></span>';
+          }}
+        ],
+        rows: ROWS,
+        emptyText: '该月暂无薪资记录'
+      }));
+      LP.mount('#count', '<span>共 ' + ROWS.length + ' 条记录</span>');
+    }
+
+    function load() {
+      var month = document.getElementById('f-month').value;
+      LP.mount('#list', '<div style="padding:18px;">' + LP.skeleton(6) + '</div>');
+      LP.get('/api/salary/records', { month: month, store_id: document.getElementById('f-store').value })
+        .then(function (d) {
+          ROWS = (d && d.list) || d || [];
+          renderStats();
+          renderList();
+        }).catch(function (e) {
+          err(e);
+          LP.mount('#list', LP.empty('薪资数据加载失败'));
+        });
+
+      LP.get('/api/attendance', { month: month }).then(function (d) {
+        var sum = (d && d.summary) || [];
+        LP.mount('#attend', LP.table({
+          columns: [
+            { title: '员工', render: function (r) { return LP.esc(r.user_name || '—'); } },
+            { title: '出勤天数', render: function (r) { return LP.fmt.num(r.days) + ' 天'; } },
+            { title: '迟到', render: function (r) { return LP.fmt.num(r.late) + ' 次'; } },
+            { title: '缺勤', render: function (r) { return LP.fmt.num(r.absent) + ' 天'; } }
+          ],
+          rows: sum,
+          emptyText: '暂无出勤数据'
+        }));
+      }).catch(function () {});
+    }
+
+    function payOne(id) {
+      var r = ROWS.filter(function (x) { return String(x.id) === String(id); })[0];
+      if (!r) return;
+      LP.confirm('确认发放「' + (r.user_name || '') + '」' + LP.fmt.money(r.total) + '？').then(function (ok) {
+        if (!ok) return;
+        LP.put('/api/salary/records/' + r.id, Object.assign({}, r, { status: '已发放' })).then(function () {
+          LP.toast('已标记发放', 'success');
+          load();
+        }).catch(err);
+      }).catch(err);
+    }
+
+    function detail(id) {
+      var r = ROWS.filter(function (x) { return String(x.id) === String(id); })[0] || {};
+      var rows = [
+        ['底薪', r.base], ['业绩提成', r.perf_commission], ['开卡提成', r.card_commission],
+        ['全勤奖', r.bonus], ['缺勤扣款', -(num(r.deduction))]
+      ];
+      LP.modal({
+        title: (r.user_name || '') + ' · 薪资明细',
+        footer: null,
+        width: 520,
+        body: '<div style="font-size:13px;">' + rows.map(function (x) {
+          return '<div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px dashed #f0f2f6;">' +
+            '<span style="color:#67707f;">' + x[0] + '</span><b style="font-variant-numeric:tabular-nums;">' + LP.fmt.money(x[1]) + '</b></div>';
+        }).join('') +
+        '<div style="display:flex;justify-content:space-between;padding:14px 0 4px;font-size:15px;">' +
+        '<b>应发合计</b><b style="color:#7f6455;">' + LP.fmt.money(r.total) + '</b></div>' +
+        '<div style="font-size:12px;color:#9aa3b2;margin-top:6px;">月份：' + LP.esc(r.month || document.getElementById('f-month').value) +
+        ' · 出勤 ' + LP.fmt.num(r.attendance_days) + ' 天</div></div>'
+      });
+    }
+
+    function init(me) {
+      document.dispatchEvent(new CustomEvent('lp:user', { detail: me }));
+      document.getElementById('f-month').value = LP.nowMonth();
+      LP.get('/api/stores').then(function (list) {
+        STORES = (list || []).filter(function (s) { return s.status !== '停业'; });
+        document.getElementById('f-store').innerHTML = '<option value="">全部门店</option>' + STORES.map(function (s) {
+          return '<option value="' + s.id + '">' + LP.esc(s.name) + '</option>';
+        }).join('');
+      }).catch(err).then(load);
+
+      document.getElementById('btn-query').addEventListener('click', load);
+      document.getElementById('f-month').addEventListener('change', load);
+      document.getElementById('f-store').addEventListener('change', load);
+      document.getElementById('btn-pay').addEventListener('click', function () {
+        var pending = ROWS.filter(function (r) { return r.status !== '已发放'; });
+        if (!pending.length) { LP.toast('没有待发放记录', 'error'); return; }
+        LP.confirm('确认发放全部 ' + pending.length + ' 人、合计 ' +
+          LP.fmt.money(pending.reduce(function (a, b) { return a + num(b.total); }, 0)) + '？').then(function (ok) {
+          if (!ok) return;
+          Promise.all(pending.map(function (r) {
+            return LP.put('/api/salary/records/' + r.id, Object.assign({}, r, { status: '已发放' }));
+          })).then(function () { LP.toast('已批量发放', 'success'); load(); }).catch(err);
+        }).catch(err);
+      });
+
+      LP.on(document, 'click', '[data-act="pay"]', function (e, t) { payOne(t.getAttribute('data-id')); });
+      LP.on(document, 'click', '[data-act="detail"]', function (e, t) { detail(t.getAttribute('data-id')); });
+    }
+
+    LP.requireRoles(['admin']).then(init).catch(function () {});
+  })();
+  </script>
+</body>
+</html>

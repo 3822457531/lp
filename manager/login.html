@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>店长登录 · 兰瓶美业</title>
+  <link rel="stylesheet" href="../css/mobile-app.css" />
+  <link rel="stylesheet" href="../assets/css/lp-app.css" />
+<link rel="stylesheet" href="../assets/css/polish-mobile.css" />
+</head>
+<body>
+  <div class="phone-page">
+    <div class="phone">
+      <div class="status-bar" style="background:#f8a0b4;color:#fff;"><span>9:41</span><span>兰瓶</span><span>●●●</span></div>
+      <div class="phone-body no-tab">
+        <div class="login-page">
+          <div class="login-logo">❀</div>
+          <div class="login-title">兰瓶美业连锁店</div>
+          <div class="login-slogan">发现更美的自己 · 店长端</div>
+          <a class="btn-pink" href="/login.html?role=manager">前 往 登 录</a>
+          <div class="login-links"><span>登录统一由系统登录页处理</span><span>店长端</span></div>
+          <div class="login-foot">专业 · 美丽 · 连锁 · 共赢</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="../assets/js/lp-api.js"></script>
+  <script src="../assets/js/lp-mock.js?v=47"></script>
+  <script>
+    /* 店长端入口：统一跳转根目录登录页，并预选「店长」角色 */
+    location.replace('/login.html?role=manager');
+  </script>
+</body>
+</html>

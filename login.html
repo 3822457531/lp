@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>登录 · 兰瓶美业连锁管理系统</title>
+<link rel="stylesheet" href="/assets/css/lp-app.css" />
+<style>
+  .lp-login-aside .brand .mark { letter-spacing: -1px; }
+  .pwd-wrap { position: relative; }
+  .pwd-wrap .eye {
+    position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+    background: none; border: none; font-size: 13px; color: #a79c93; cursor: pointer; padding: 6px;
+  }
+  .demo-line { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  .demo-line button {
+    border: 1px solid #f0e6df; background: #fdfaf8; border-radius: 8px; padding: 6px 10px;
+    font-size: 12px; color: #8b6f5e; cursor: pointer;
+  }
+  .demo-line button:hover { border-color: #e85a7a; color: #e85a7a; }
+</style>
+</head>
+<body>
+<div class="lp-login-page">
+  <div class="lp-login-card">
+    <aside class="lp-login-aside">
+      <div class="brand">
+        <span class="mark">兰</span>
+        <h1>兰瓶美业</h1>
+      </div>
+      <p class="slogan">连锁门店一体化管理平台<br />客户 · 项目 · 核销 · 出入库 · 薪资考核</p>
+      <ul>
+        <li><i>◆</i><span>管理员在 PC 端统管全部门店、项目、审核与薪资考核</span></li>
+        <li><i>◆</i><span>店长在手机端管理本店客户、员工、库存与预约</span></li>
+        <li><i>◆</i><span>员工扫码核销、预约客户、打卡与查看薪资</span></li>
+        <li><i>◆</i><span>客户无需安装 App，短信链接打开即为核销二维码</span></li>
+      </ul>
+      <div class="foot">© 2024 兰瓶美业 · Lanping Beauty Chain</div>
+    </aside>
+
+    <section class="lp-login-form">
+      <h2>账号登录</h2>
+      <p class="sub">请选择身份并使用员工手机号登录</p>
+
+      <div class="roles" id="roleTabs">
+        <button data-role="admin">管理员</button>
+        <button data-role="manager">店长</button>
+        <button data-role="staff">员工</button>
+      </div>
+
+      <div class="lp-login-tip" id="tip"></div>
+
+      <form id="loginForm" autocomplete="on">
+        <div class="field-row">
+          <label for="phone">手机号</label>
+          <input class="lp-field" id="phone" name="phone" type="tel" inputmode="numeric" maxlength="11"
+                 placeholder="请输入 11 位手机号" autocomplete="username" />
+        </div>
+        <div class="field-row">
+          <label for="password">密码</label>
+          <div class="pwd-wrap">
+            <input class="lp-field" id="password" name="password" type="password"
+                   placeholder="请输入密码" autocomplete="current-password" />
+            <button type="button" class="eye" id="eyeBtn">显示</button>
+          </div>
+        </div>
+        <button class="btn-primary" type="submit" id="submitBtn">登 录</button>
+      </form>
+
+      <div class="links">
+        <a href="/register.html">员工注册（需审核）</a>
+        <a href="/customer/verify.html" id="customerEntry">客户核销入口</a>
+      </div>
+
+      <div class="demo">
+        <div>演示账号（密码均为 <code>123456</code>）：</div>
+        <div class="demo-line" id="demoLine">
+          <button data-p="13800000000">管理员 13800000000</button>
+          <button data-p="13900000001">店长 13900000001</button>
+          <button data-p="13800001001">员工 13800001001</button>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script src="/assets/js/lp-api.js"></script>
+<script>
+(function () {
+  var form = document.getElementById('loginForm');
+  var phoneEl = document.getElementById('phone');
+  var pwdEl = document.getElementById('password');
+  var btn = document.getElementById('submitBtn');
+  var tip = document.getElementById('tip');
+  var tabs = document.getElementById('roleTabs');
+  var q = LP.query();
+
+  /* 已登录直接进首页 */
+  var me = LP.user();
+  if (me && LP.token()) location.replace(LP.homeFor(me.role));
+
+  function showTip(msg) {
+    tip.textContent = msg;
+    tip.classList.add('show');
+  }
+  function hideTip() { tip.classList.remove('show'); }
+
+  function pickRole(role) {
+    LP.$$('#roleTabs button').forEach(function (b) {
+      b.classList.toggle('on', b.dataset.role === role);
+    });
+  }
+  var preset = q.role || 'admin';
+  pickRole(preset);
+  tabs.addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-role]');
+    if (!b) return;
+    pickRole(b.dataset.role);
+    hideTip();
+  });
+
+  document.getElementById('demoLine').addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-p]');
+    if (!b) return;
+    phoneEl.value = b.dataset.p;
+    pwdEl.value = '123456';
+    phoneEl.focus();
+    hideTip();
+  });
+
+  document.getElementById('eyeBtn').addEventListener('click', function () {
+    var on = pwdEl.type === 'password';
+    pwdEl.type = on ? 'text' : 'password';
+    this.textContent = on ? '隐藏' : '显示';
+  });
+
+  /* 演示快捷登录：/login.html?demo=admin|manager|staff ，自动带出账号并登录 */
+  var DEMO = { admin: '13800000000', manager: '13900000001', staff: '13800001001' };
+  if (q.demo && DEMO[q.demo]) {
+    pickRole(q.demo);
+    phoneEl.value = DEMO[q.demo];
+    pwdEl.value = '123456';
+    setTimeout(function () {
+      if (form.requestSubmit) form.requestSubmit(); else form.dispatchEvent(new Event('submit', { cancelable: true }));
+    }, 120);
+  }
+
+  phoneEl.addEventListener('input', function () {
+    this.value = this.value.replace(/\D/g, '').slice(0, 11);
+  });
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    hideTip();
+    var phone = phoneEl.value.trim();
+    var pwd = pwdEl.value;
+    if (!/^1\d{10}$/.test(phone)) return showTip('请输入正确的 11 位手机号');
+    if (!pwd) return showTip('请输入密码');
+
+    btn.disabled = true;
+    btn.textContent = '登录中…';
+    LP.login(phone, pwd)
+      .then(function (user) {
+        btn.textContent = '登录成功，跳转中…';
+        var target = q.next ? decodeURIComponent(q.next) : LP.homeFor(user.role);
+        /* next 指向自己无权限的端时，回落到本角色首页 */
+        var prefix = { admin: '/admin/', manager: '/manager/', staff: '/staff/' }[user.role];
+        if (target.indexOf(prefix) !== 0) target = LP.homeFor(user.role);
+        location.replace(target);
+      })
+      .catch(function (err) {
+        btn.disabled = false;
+        btn.textContent = '登 录';
+        showTip(err.message);
+        if (/审核|拒绝|停用|不存在/.test(err.message)) {
+          LP.toast(err.message, 'error');
+        }
+      });
+  });
+})();
+</script>
+</body>
+</html>

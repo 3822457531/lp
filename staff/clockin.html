@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>打卡 · 兰瓶美业</title>
+  <link rel="stylesheet" href="../css/mobile-app.css" />
+  <link rel="stylesheet" href="../assets/css/lp-app.css" />
+  <link rel="stylesheet" href="staff.css" />
+<link rel="stylesheet" href="../assets/css/polish-mobile.css" />
+</head>
+<body>
+  <div class="phone-page">
+    <div class="phone">
+      <div class="status-bar"><span>9:41</span><span>●●●</span></div>
+      <div class="phone-body no-tab" id="body">
+        <div class="nav-bar"><a class="back" href="home.html">‹</a><h1>考勤打卡</h1></div>
+        <div id="main"><div class="st-load">加载中…</div></div>
+        <div class="pad-bottom"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../assets/js/lp-api.js"></script>
+  <script src="../assets/js/lp-mock.js?v=47"></script>
+  <script src="staff.js"></script>
+  <script>
+    (function () {
+      'use strict';
+      var user = LP.user() || {};
+      var today = null, settings = {}, mode = '两段卡', workStart = '09:30', workEnd = '18:30';
+      var method = 'geo', punching = false, records = [];
+
+      STAFF.guard().then(function (me) {
+        user = me || user;
+        return Promise.all([
+          LP.get('/api/attendance/today'),
+          LP.get('/api/settings').catch(function () { return {}; })
+        ]);
+      }).then(function (res) {
+        var d = res[0] || {};
+        today = d.today || null;
+        mode = d.mode || '两段卡';
+        workStart = d.work_start || '09:30';
+        workEnd = d.work_end || '18:30';
+        settings = res[1] || {};
+        method = (String(settings.clock_methods || 'geo').split(',')[0] || 'geo').trim();
+        render();
+        return loadRecords();
+      }).catch(function (e) { STAFF.fail(e); });
+
+      function pad(n) { return String(n).padStart(2, '0'); }
+      function nowText(sec) {
+        var d = new Date();
+        return pad(d.getHours()) + ':' + pad(d.getMinutes()) + (sec ? ':' + pad(d.getSeconds()) : '');
+      }
+
+      function progress() {
+        var p = function (t) {
+          var a = String(t).split(':');
+          return Number(a[0]) * 60 + Number(a[1] || 0);
+        };
+        var s = p(workStart), e = p(workEnd);
+        var d = new Date();
+        var cur = d.getHours() * 60 + d.getMinutes();
+        if (e <= s) return 0.5;
+        var r = (cur - s) / (e - s);
+        return Math.max(0, Math.min(1, r));
+      }
+
+      function render() {
+        var started = !!(today && today.check_in);
+        var ended = !!(today && today.check_out);
+        var deg = Math.round(progress() * 360);
+        var label = ended ? '今日已打卡' : (started ? '下班打卡' : '上班打卡');
+        var statusText = !started ? '未打卡' : (ended ? '今日打卡已完成' : '已上班打卡，别忘了下班打卡');
+        if (today && today.status && today.status !== '正常') statusText += '（' + today.status + '）';
+
+        var html = '';
+        html += '<div class="clock-wrap">' +
+          '<div class="clock-ring" style="background:conic-gradient(var(--pink) 0deg ' + deg + 'deg, #f1f1f4 ' + deg + 'deg 360deg);">' +
+          '<div class="clock-inner">' +
+          '<div class="time" id="clockTime">' + nowText(false) + '</div>' +
+          '<div class="hint">' + STAFF.esc(workStart + ' - ' + workEnd) + '</div>' +
+          '</div></div>' +
+          '<div class="clock-status" id="clockStatus">' + STAFF.esc(statusText) + '</div>' +
+          '<div class="clock-loc">上班 ' + STAFF.esc((today && today.check_in) || '--:--') +
+          ' · 下班 ' + STAFF.esc((today && today.check_out) || '--:--') + '</div>' +
+          '<div class="clock-loc">' + STAFF.esc(mode) + ' · 门店 WiFi：' + STAFF.esc(settings.wifi_name || '—') + '</div>' +
+          '</div>';
+
+        html += '<div class="clock-tools">' +
+          '<div class="t ' + (method === 'wifi' ? 'on' : '') + '" data-method="wifi"><div class="ic">📶</div><span>门店WiFi</span></div>' +
+          '<div class="t ' + (method === 'geo' ? 'on' : '') + '" data-method="geo"><div class="ic">📍</div><span>定位打卡</span></div>' +
+          '</div>';
+
+        html += '<div style="padding:6px 16px 14px;">' +
+          '<button class="btn-block" id="punchBtn"' + (ended ? ' disabled' : '') + '>' + label + '</button></div>';
+
+        html += '<div class="section-hd">本月记录</div><div id="recList"><div class="st-load">加载中…</div></div>';
+        LP.mount('#main', html);
+
+        LP.on('.clock-tools', 'click', '.t', function () {
+          method = this.getAttribute('data-method');
+          var ts = LP.$$('.clock-tools .t');
+          for (var i = 0; i < ts.length; i++) {
+            ts[i].classList.toggle('on', ts[i].getAttribute('data-method') === method);
+          }
+        });
+
+        LP.$('#punchBtn').addEventListener('click', punch);
+
+        if (!window.__clockTimer) {
+          window.__clockTimer = setInterval(function () {
+            var el = LP.$('#clockTime');
+            if (el) el.textContent = nowText(false);
+          }, 1000);
+        }
+        renderRecords();
+      }
+
+      function loadRecords() {
+        return LP.get('/api/attendance', { month: LP.nowMonth() }).then(function (d) {
+          var list = (d && d.list) || [];
+          records = list.filter(function (r) { return String(r.user_id || r.staff_id) === String(user.id) || r.staff_name === user.name; });
+          renderRecords();
+        }).catch(function () {
+          LP.mount('#recList', '<div class="st-muted" style="padding:8px 16px;">记录加载失败</div>');
+        });
+      }
+
+      function renderRecords() {
+        var box = LP.$('#recList');
+        if (!box) return;
+        if (!records.length) {
+          box.innerHTML = '<div class="st-muted" style="padding:8px 16px 16px;">本月暂无打卡记录</div>';
+          return;
+        }
+        var h = '';
+        for (var i = 0; i < records.length; i++) {
+          var r = records[i];
+          var st = r.status || '正常';
+          h += '<div class="kv" style="padding:11px 16px;background:#fff;">' +
+            '<span class="k">' + STAFF.esc(r.date || '—') + '</span>' +
+            '<span class="v">' + STAFF.esc(r.check_in || '--:--') + ' - ' + STAFF.esc(r.check_out || '--:--') +
+            '<span class="tag ' + STAFF.tagClass(st) + '" style="margin-left:8px;">' + STAFF.esc(st) + '</span></span>' +
+            '</div>';
+        }
+        box.innerHTML = h;
+      }
+
+      function locate() {
+        return new Promise(function (resolve) {
+          if (!navigator.geolocation) return resolve('未授权定位');
+          navigator.geolocation.getCurrentPosition(function (pos) {
+            resolve(pos.coords.latitude.toFixed(6) + ',' + pos.coords.longitude.toFixed(6));
+          }, function () {
+            resolve('未授权定位');
+          }, { timeout: 5000, maximumAge: 60000 });
+        });
+      }
+
+      function punch() {
+        if (punching) return;
+        punching = true;
+        var btn = LP.$('#punchBtn');
+        btn.disabled = true;
+        btn.textContent = '打卡中…';
+        var prep = method === 'geo' ? locate() : Promise.resolve('门店WiFi');
+        prep.then(function (addr) {
+          return LP.post('/api/attendance/check', {
+            method: method,
+            wifi: settings.wifi_name || '',
+            address: addr
+          });
+        }).then(function (r) {
+          LP.toast((r && r.action) || '打卡成功', 'success');
+          punching = false;
+          return refresh();
+        }).catch(function (e) {
+          punching = false;
+          btn.disabled = false;
+          LP.toast(e.message, 'error');
+          return refresh();
+        });
+      }
+
+      function refresh() {
+        return LP.get('/api/attendance/today').then(function (d) {
+          today = (d && d.today) || null;
+          mode = d.mode || mode;
+          workStart = d.work_start || workStart;
+          workEnd = d.work_end || workEnd;
+          render();
+          return loadRecords();
+        });
+      }
+    })();
+  </script>
+</body>
+</html>

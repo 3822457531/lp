@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>审核管理 · 兰瓶管理后台</title>
+  <link rel="stylesheet" href="css/admin.css" />
+  <link rel="stylesheet" href="../assets/css/lp-app.css" />
+  <link rel="stylesheet" href="../assets/css/polish.css" />
+</head>
+<body data-page="audit">
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <div class="main">
+      <header class="topbar">
+        <div class="topbar-title">审核管理 <span>补次 / 退次 / 改约 / 开卡 / 请假等业务审批</span></div>
+        <div class="topbar-actions" id="top-user"></div>
+      </header>
+      <div class="content">
+        <div class="stat-grid" style="grid-template-columns: repeat(3, 1fr);" id="stats"></div>
+
+        <div class="panel">
+          <div class="panel-hd">
+            <h3>待审批申请</h3>
+            <span>
+              <button class="btn ghost" id="btn-pass-all">全部通过</button>
+              <button class="btn" id="btn-refresh">刷新</button>
+            </span>
+          </div>
+          <div class="panel-bd">
+            <div class="toolbar">
+              <input class="field search" id="f-q" placeholder="申请人 / 客户 / 说明" style="width:250px;" />
+              <select class="field" id="f-type" style="width:150px;">
+                <option value="">全部类型</option>
+                <option value="补次">补次</option>
+                <option value="退次">退次</option>
+                <option value="改约">改约</option>
+                <option value="开卡">开卡</option>
+                <option value="请假">请假</option>
+              </select>
+              <select class="field" id="f-status" style="width:140px;">
+                <option value="待审核">待审核</option>
+                <option value="">全部状态</option>
+                <option value="已通过">已通过</option>
+                <option value="已驳回">已驳回</option>
+              </select>
+              <button class="btn ghost" id="btn-search">查询</button>
+            </div>
+          </div>
+          <div class="lp-scroll-x" id="list"></div>
+          <div class="pagination" id="count"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../assets/js/lp-api.js"></script>
+  <script src="../assets/js/lp-mock.js?v=47"></script>
+  <script src="js/layout.js"></script>
+  <script>
+  (function () {
+    'use strict';
+    var ROWS = [];
+
+    function err(e) { LP.toast((e && e.message) || '操作失败', 'error'); }
+    function typeTag(t) {
+      var m = { '补次': 'tag-blue', '退次': 'tag-orange', '改约': 'tag-gray', '开卡': 'tag-brown', '请假': 'tag-gray' };
+      return '<span class="tag ' + (m[t] || 'tag-blue') + '">' + LP.esc(t || '其他') + '</span>';
+    }
+    function statusTag(s) {
+      var m = { '待审核': 'tag-orange', '已通过': 'tag-green', '已驳回': 'tag-red' };
+      return '<span class="tag ' + (m[s] || 'tag-gray') + '">' + LP.esc(s || '—') + '</span>';
+    }
+
+    function renderStats() {
+      var pending = ROWS.filter(function (r) { return r.status === '待审核'; });
+      document.getElementById('stats').innerHTML =
+        '<div class="stat-card"><div class="label">待审批<span class="icon-box orange">!</span></div>' +
+          '<div class="value">' + pending.length + '</div><div class="trend">需要管理员处理</div></div>' +
+        '<div class="stat-card"><div class="label">涉及金额<span class="icon-box brown">¥</span></div>' +
+          '<div class="value">' + LP.fmt.money(pending.reduce(function (a, b) { return a + (Number(b.amount) || 0); }, 0)) + '</div>' +
+          '<div class="trend">待审批单合计</div></div>' +
+        '<div class="stat-card"><div class="label">本月已处理<span class="icon-box green">✓</span></div>' +
+          '<div class="value">' + ROWS.filter(function (r) { return r.status !== '待审核'; }).length + '</div>' +
+          '<div class="trend">通过 ' + ROWS.filter(function (r) { return r.status === '已通过'; }).length +
+          ' · 驳回 ' + ROWS.filter(function (r) { return r.status === '已驳回'; }).length + '</div></div>';
+    }
+
+    function renderList() {
+      var q = document.getElementById('f-q').value.trim().toLowerCase();
+      var type = document.getElementById('f-type').value;
+      var status = document.getElementById('f-status').value;
+      var rows = ROWS.filter(function (r) {
+        if (type && r.apply_type !== type) return false;
+        if (status && r.status !== status) return false;
+        if (!q) return true;
+        return [r.created_by_name, r.customer_name, r.description, r.apply_type].join(' ').toLowerCase().indexOf(q) >= 0;
+      });
+      renderStats();
+      LP.mount('#list', LP.table({
+        columns: [
+          { title: '类型', render: function (r) { return typeTag(r.apply_type || r.type); } },
+          { title: '申请人', render: function (r) {
+              return LP.esc(r.created_by_name || '—') + '<br/><span class="meta">' +
+                LP.esc(r.apply_role === 'manager' ? '店长' : '员工') + '</span>';
+          }},
+          { title: '门店', render: function (r) { return LP.esc(r.store_name || '—'); } },
+          { title: '说明', render: function (r) {
+              return LP.esc(r.description || r.detail || '—') + (r.customer_name ? '<br/><span class="meta">客户：' +
+                LP.esc(r.customer_name) + '</span>' : '');
+          }},
+          { title: '金额', cls: 'price', render: function (r) { return Number(r.amount) ? LP.fmt.money(r.amount) : '—'; } },
+          { title: '申请时间', render: function (r) { return LP.esc(LP.fmt.datetime(r.created_at)); } },
+          { title: '状态', render: function (r) { return statusTag(r.status); } },
+          { title: '操作', render: function (r) {
+              if (r.status !== '待审核') return '<span class="ops"><a class="btn-link" data-act="detail" data-id="' + r.id + '">详情</a></span>';
+              return '<span class="ops">' +
+                '<a class="btn-link" data-act="pass" data-id="' + r.id + '">通过</a>' +
+                '<a class="btn-link danger" data-act="reject" data-id="' + r.id + '">驳回</a>' +
+                '<a class="btn-link" data-act="detail" data-id="' + r.id + '">详情</a></span>';
+          }}
+        ],
+        rows: rows,
+        emptyText: '暂无待审批申请'
+      }));
+      LP.mount('#count', '<span>共 ' + rows.length + ' 条</span>');
+    }
+
+    function load() {
+      LP.mount('#list', '<div style="padding:18px;">' + LP.skeleton(4) + '</div>');
+      LP.get('/api/audits', { pageSize: 200 }).then(function (d) {
+        ROWS = (d && d.list) || d || [];
+        renderList();
+      }).catch(function (e) {
+        err(e);
+        LP.mount('#list', LP.empty('审核数据加载失败'));
+      });
+    }
+
+    function decide(id, pass) {
+      var r = ROWS.filter(function (x) { return String(x.id) === String(id); })[0] || {};
+      if (!pass) {
+        LP.formModal({
+          title: '驳回申请',
+          okText: '确认驳回',
+          fields: [{ name: 'reason', label: '驳回理由', type: 'textarea', full: true, required: true, value: '' }],
+          onSubmit: function (out) {
+            return LP.put('/api/audits/' + r.id, { status: '已驳回', reject_reason: out.reason, confirmed_at: LP.fmt.datetime(new Date()) })
+              .then(function () { LP.toast('已驳回', 'success'); load(); });
+          }
+        });
+        return;
+      }
+      LP.confirm('确认通过「' + (r.apply_type || '') + '」申请？').then(function (ok) {
+        if (!ok) return;
+        LP.put('/api/audits/' + r.id, { status: '已通过', confirmed_at: LP.fmt.datetime(new Date()) })
+          .then(function () { LP.toast('已通过', 'success'); load(); })
+          .catch(err);
+      }).catch(err);
+    }
+
+    function detail(id) {
+      var r = ROWS.filter(function (x) { return String(x.id) === String(id); })[0] || {};
+      LP.modal({
+        title: '审批详情',
+        footer: null,
+        width: 520,
+        body: '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px 18px;font-size:13px;">' +
+          '<div><span style="color:#9aa3b2;">类型</span><br/>' + typeTag(r.apply_type) + '</div>' +
+          '<div><span style="color:#9aa3b2;">状态</span><br/>' + statusTag(r.status) + '</div>' +
+          '<div><span style="color:#9aa3b2;">申请人</span><br/>' + LP.esc(r.created_by_name || '—') + '</div>' +
+          '<div><span style="color:#9aa3b2;">门店</span><br/>' + LP.esc(r.store_name || '—') + '</div>' +
+          '<div><span style="color:#9aa3b2;">客户</span><br/>' + LP.esc(r.customer_name || '—') + '</div>' +
+          '<div><span style="color:#9aa3b2;">金额</span><br/>' + (Number(r.amount) ? LP.fmt.money(r.amount) : '—') + '</div>' +
+          '<div style="grid-column:1/-1;"><span style="color:#9aa3b2;">说明</span><br/>' + LP.esc(r.description || r.detail || '—') + '</div>' +
+          '<div style="grid-column:1/-1;"><span style="color:#9aa3b2;">申请时间</span><br/>' + LP.esc(LP.fmt.datetime(r.created_at)) + '</div>' +
+          '</div>'
+      });
+    }
+
+    function batchPass() {
+      var pending = ROWS.filter(function (r) { return r.status === '待审核'; });
+      if (!pending.length) { LP.toast('没有待审批申请', 'error'); return; }
+      LP.confirm('确认通过全部 ' + pending.length + ' 条申请？').then(function (ok) {
+        if (!ok) return;
+        Promise.all(pending.map(function (r) {
+          return LP.put('/api/audits/' + r.id, { status: '已通过', confirmed_at: LP.fmt.datetime(new Date()) });
+        })).then(function () { LP.toast('已通过 ' + pending.length + ' 条', 'success'); load(); }).catch(err);
+      }).catch(err);
+    }
+
+    function init(me) {
+      document.dispatchEvent(new CustomEvent('lp:user', { detail: me }));
+      load();
+      document.getElementById('btn-search').addEventListener('click', renderList);
+      document.getElementById('f-q').addEventListener('input', LP.debounce(renderList, 300));
+      document.getElementById('f-type').addEventListener('change', renderList);
+      document.getElementById('f-status').addEventListener('change', load);
+      document.getElementById('btn-refresh').addEventListener('click', load);
+      document.getElementById('btn-pass-all').addEventListener('click', batchPass);
+      LP.on(document, 'click', '[data-act="pass"]', function (e, t) { decide(t.getAttribute('data-id'), true); });
+      LP.on(document, 'click', '[data-act="reject"]', function (e, t) { decide(t.getAttribute('data-id'), false); });
+      LP.on(document, 'click', '[data-act="detail"]', function (e, t) { detail(t.getAttribute('data-id')); });
+    }
+
+    LP.requireRoles(['admin']).then(init).catch(function () {});
+  })();
+  </script>
+</body>
+</html>

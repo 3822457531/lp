@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>消费记录 · 兰瓶美业</title>
+  <link rel="stylesheet" href="../css/mobile-app.css" />
+  <link rel="stylesheet" href="../assets/css/lp-app.css" />
+  <link rel="stylesheet" href="../assets/css/polish-mobile.css" />
+  <style>
+    .sum{margin:12px 16px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+    .sum .c{background:#fff;border-radius:14px;padding:13px 8px;text-align:center;box-shadow:0 1px 2px rgba(24,28,40,.05);}
+    .sum .n{font-size:19px;font-weight:700;font-family:var(--font-num,inherit);}
+    .sum .n.red{color:#d94b6d;}
+    .sum .l{font-size:11px;color:#98a0ae;margin-top:3px;}
+    .rec{display:flex;gap:12px;padding:14px 16px;border-bottom:1px solid #f2f3f7;}
+    .rec:last-child{border-bottom:0;}
+    .rec .tl{width:4px;border-radius:3px;background:#f4c9d4;flex:none;}
+    .rec.done .tl{background:#a8dcc4;}
+    .rec .main{flex:1;min-width:0;}
+    .rec h4{margin:0 0 4px;font-size:14px;font-weight:600;color:#1f2329;}
+    .rec p{margin:0;font-size:11.8px;color:#8b93a1;line-height:1.6;}
+    .rec .rt{text-align:right;font-size:12px;color:#98a0ae;white-space:nowrap;}
+    .rec .rt b{display:block;color:#d94b6d;font-size:13.5px;font-family:var(--font-num,inherit);}
+  </style>
+</head>
+<body>
+  <div class="phone-page">
+    <div class="phone">
+      <div class="status-bar"><span>9:41</span><span>兰瓶</span><span>●●●</span></div>
+      <div class="phone-body" id="body">
+        <div class="st-load">加载中…</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../assets/js/lp-api.js"></script>
+  <script src="../assets/js/lp-mock.js?v=47"></script>
+  <script src="customer.js"></script>
+  <script>
+    (function () {
+      'use strict';
+      var rows = [];
+
+      CUST.guard().then(function () {
+        CUST.mountTab('records');
+        render();
+        return LP.get('/api/verifications', { customer_id: (CUST.me() || {}).id, size: 100 }).then(function (d) {
+          rows = (d.list || d || []).slice().sort(function (a, b) {
+            return String(b.created_at || b.at || '').localeCompare(String(a.created_at || a.at || ''));
+          });
+          render();
+        }).catch(CUST.fail);
+      }).catch(function () { });
+
+      function money(v) { return CUST.money(v || 0); }
+
+      function render() {
+        var done = rows.filter(function (r) { return r.status === '已完成' || r.status === '已完成核销'; });
+        var times = rows.reduce(function (s, r) { return s + (Number(r.total_times || r.times) || 1); }, 0);
+        var amt = done.reduce(function (s, r) {
+          return s + (Number(r.total_amount || r.verify_amount || r.amount) || 0);
+        }, 0);
+
+        var html = CUST.nav('消费记录', 'home.html');
+        html += '<div class="sum">' +
+          '<div class="c"><div class="n">' + rows.length + '</div><div class="l">核销笔数</div></div>' +
+          '<div class="c"><div class="n">' + times + '</div><div class="l">消耗次数</div></div>' +
+          '<div class="c"><div class="n red">' + money(amt) + '</div><div class="l">累计划扣</div></div>' +
+          '</div>';
+
+        if (!rows.length) {
+          html += CUST.empty('还没有消费记录');
+          CUST.body().innerHTML = html;
+          return;
+        }
+
+        html += '<div class="list-card" style="padding:0;">';
+        rows.forEach(function (r) {
+          var items = CUST.items(r.items);
+          var detail = items.length ? items.map(function (it) {
+            return (it.name || it.project_name || '项目') + ' ×' + (it.times || it.count || 1);
+          }).join('、') : (r.project_name || '—');
+          var ok = r.status === '已完成' || r.status === '已完成核销';
+          var when = String(r.created_at || r.at || '').replace('T', ' ');
+          html += '<div class="rec' + (ok ? ' done' : '') + '"><span class="tl"></span><div class="main">' +
+            '<h4>' + CUST.esc(detail) + '</h4>' +
+            '<p>' + CUST.esc(when) + '<br/>' + CUST.esc(r.store_name || '') +
+            (r.staff_name ? ' · ' + CUST.esc(r.staff_name) : '') + ' · ' + CUST.tag(r.status) + '</p>' +
+            '</div><div class="rt"><b>' + money(r.total_amount || r.verify_amount || r.amount) + '</b>' +
+            (Number(r.total_times || r.times) || 1) + ' 次</div></div>';
+        });
+        html += '</div><div style="height:16px;"></div>';
+        CUST.body().innerHTML = html;
+      }
+    })();
+  </script>
+</body>
+</html>

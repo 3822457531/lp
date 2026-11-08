@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>项目目录 · 兰瓶美业</title>
+  <link rel="stylesheet" href="../css/mobile-app.css" />
+  <link rel="stylesheet" href="../assets/css/lp-app.css" />
+  <link rel="stylesheet" href="../assets/css/polish-mobile.css" />
+  <style>
+    .pj{display:flex;gap:12px;padding:14px 16px;border-bottom:1px solid #f2f3f7;align-items:center;}
+    .pj:last-child{border-bottom:0;}
+    .pj .th{width:54px;height:54px;border-radius:13px;flex:none;display:flex;align-items:center;justify-content:center;
+      background:linear-gradient(145deg,#fdeef3,#f8dbe4);color:#d94b6d;font-size:17px;font-weight:600;}
+    .pj .info{flex:1;min-width:0;}
+    .pj h4{margin:0 0 4px;font-size:14.5px;font-weight:600;color:#1f2329;}
+    .pj p{margin:0;font-size:11.8px;color:#8b93a1;}
+    .pj .pr{text-align:right;}
+    .pj .pr b{display:block;color:#d94b6d;font-size:15px;font-family:var(--font-num,inherit);}
+    .pj .pr del{font-size:11px;color:#b6bcc8;}
+    .pj .pr a{display:inline-block;margin-top:6px;font-size:12px;color:#e2587c;}
+  </style>
+</head>
+<body>
+  <div class="phone-page">
+    <div class="phone">
+      <div class="status-bar"><span>9:41</span><span>兰瓶</span><span>●●●</span></div>
+      <div class="phone-body" id="body">
+        <div class="st-load">加载中…</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../assets/js/lp-api.js"></script>
+  <script src="../assets/js/lp-mock.js?v=47"></script>
+  <script src="customer.js"></script>
+  <script>
+    (function () {
+      'use strict';
+      var rows = [], cat = '全部', cats = ['全部'];
+
+      CUST.guard().then(function () {
+        render();
+        return LP.get('/api/projects', { status: '上架', size: 100 }).then(function (d) {
+          rows = d.list || d || [];
+          rows.forEach(function (p) { if (p.category && cats.indexOf(p.category) < 0) cats.push(p.category); });
+          render();
+        }).catch(CUST.fail);
+      }).catch(function () { });
+
+      function render() {
+        var list = rows.filter(function (p) { return cat === '全部' || p.category === cat; });
+        var html = CUST.nav('项目目录', 'home.html');
+
+        html += '<div class="tabs-row" style="overflow-x:auto;white-space:nowrap;">' +
+          cats.map(function (c) {
+            return '<span class="' + (c === cat ? 'active' : '') + '" data-c="' + CUST.esc(c) + '">' + CUST.esc(c) + '</span>';
+          }).join('') + '</div>';
+
+        if (!list.length) html += CUST.empty('暂无在售项目');
+        else {
+          html += '<div class="list-card" style="padding:0;">';
+          list.forEach(function (p) {
+            html += '<div class="pj"><div class="th">' + CUST.esc(String(p.name || '项').slice(0, 1)) + '</div>' +
+              '<div class="info"><h4>' + CUST.esc(p.name) + '</h4>' +
+              '<p>' + CUST.esc(p.category || '') + ' · ' + (p.minutes || 60) + ' 分钟 · ' + (p.total_times || 1) + ' 次卡</p></div>' +
+              '<div class="pr"><b>' + CUST.money(p.member_price || p.price) + '</b>' +
+              (p.member_price && p.price ? '<del>' + CUST.money(p.price) + '</del>' : '') +
+              '<a href="booking.html?project=' + encodeURIComponent(p.id) + '">预约 ›</a></div></div>';
+          });
+          html += '</div>';
+        }
+        html += '<div style="height:16px;"></div>';
+        CUST.body().innerHTML = html;
+
+        CUST.$$('[data-c]').forEach(function (el) {
+          el.addEventListener('click', function () { cat = el.getAttribute('data-c'); render(); });
+        });
+      }
+    })();
+  </script>
+</body>
+</html>

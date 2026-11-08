@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>店长工作台 · 兰瓶美业</title>
+  <link rel="stylesheet" href="../css/mobile-app.css" />
+  <link rel="stylesheet" href="../assets/css/lp-app.css" />
+  <style>
+    .todo-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 44px; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+    .todo-item:last-child { border-bottom: none; }
+    .todo-item em { font-style: normal; color: var(--text-3); margin-left: auto; }
+    .todo-item b { color: var(--pink); font-weight: 600; white-space: nowrap; }
+    .bd-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 44px; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+    .bd-row:last-child { border-bottom: none; }
+    .bd-row .n { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .bd-row span { font-size: 12px; color: var(--text-2); white-space: nowrap; }
+    .menu-item:active { opacity: .7; }
+  </style>
+<link rel="stylesheet" href="../assets/css/polish-mobile.css" />
+</head>
+<body>
+  <div class="phone-page">
+    <div class="phone">
+      <div class="status-bar" style="background:#f8a0b4;color:#fff;"><span id="sbTime">9:41</span><span>兰瓶</span><span>●●●</span></div>
+      <div class="phone-body">
+        <div class="mgr-header">
+          <div class="store-row">
+            <span id="storeName">加载中…</span>
+            <span id="bell">🔔</span>
+          </div>
+          <div class="mgr-user">
+            <div class="av-circle" id="avatar" style="display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:600;">店</div>
+            <div style="min-width:0;">
+              <h2 id="hello">你好</h2>
+              <p id="sub">兰瓶美业 · 店长端</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="menu-card">
+          <div class="menu-grid">
+            <a class="menu-item" href="customers.html"><span class="menu-ico c1">👤</span>客户管理</a>
+            <a class="menu-item" href="employees.html"><span class="menu-ico c2">👥</span>员工管理</a>
+            <a class="menu-item" href="projects.html"><span class="menu-ico c3">✦</span>项目管理</a>
+            <a class="menu-item" href="verify.html"><span class="menu-ico c4">✓</span>核销列表</a>
+            <a class="menu-item" href="recharge.html"><span class="menu-ico c5">💳</span>充值开卡</a>
+            <a class="menu-item" href="inventory.html"><span class="menu-ico c6">📦</span>出入库</a>
+            <a class="menu-item" href="appointments.html"><span class="menu-ico c7">📅</span>预约列表</a>
+            <a class="menu-item" href="assessment.html"><span class="menu-ico c8">🎯</span>考核情况</a>
+            <a class="menu-item" href="clockin.html"><span class="menu-ico c9">⏱</span>打卡上班</a>
+          </div>
+          <a class="settings-btn" href="settings.html">⚙ 设置</a>
+        </div>
+
+        <div class="section-hd">本月数据 <span id="monthLabel">—</span></div>
+        <div class="today-card" id="stats">
+          <div><div class="n">—</div><div class="l">本月业绩</div></div>
+          <div><div class="n">—</div><div class="l">核销笔数</div></div>
+          <div><div class="n">—</div><div class="l">开卡金额</div></div>
+          <div><div class="n">—</div><div class="l">待核销</div></div>
+        </div>
+
+        <div class="section-hd">待办 <span id="todoHint">—</span></div>
+        <div class="list-card" id="todo"></div>
+
+        <div class="section-hd">近期生日 <span id="bdHint"></span></div>
+        <div class="list-card" id="birthdays"></div>
+      </div>
+
+      <nav class="tab-bar">
+        <a class="active" href="home.html"><span class="dot"></span>首页</a>
+        <a href="customers.html"><span class="dot"></span>客户</a>
+        <a href="verify.html"><span class="dot"></span>核销</a>
+        <a href="mine.html"><span class="dot"></span>我的</a>
+      </nav>
+    </div>
+  </div>
+
+  <script src="../assets/js/lp-api.js"></script>
+  <script src="../assets/js/lp-mock.js?v=60"></script>
+  <script>
+    (function () {
+      'use strict';
+      var me = null;
+
+      function pad(n) { return String(n).padStart(2, '0'); }
+      (function tick() {
+        var d = new Date();
+        var el = document.getElementById('sbTime');
+        if (el) el.textContent = pad(d.getHours()) + ':' + pad(d.getMinutes());
+        setTimeout(tick, 30000);
+      })();
+
+      function daysTo(bd) {
+        if (!bd) return null;
+        var p = String(bd).split('-');
+        if (p.length < 3) return null;
+        var now = new Date();
+        var base = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        var tar = new Date(now.getFullYear(), Number(p[1]) - 1, Number(p[2]));
+        if (tar < base) tar.setFullYear(tar.getFullYear() + 1);
+        return Math.round((tar - base) / 86400000);
+      }
+
+      var todoEl = document.getElementById('todo');
+      var bdEl = document.getElementById('birthdays');
+      todoEl.innerHTML = LP.skeleton(3);
+      bdEl.innerHTML = LP.skeleton(2);
+
+      LP.requireRoles(['manager']).then(function (u) {
+        me = u;
+        document.getElementById('storeName').textContent = (u.store_name || '门店') + ' ▾';
+        document.getElementById('hello').textContent = '你好，' + (u.name || '店长');
+        document.getElementById('sub').textContent = (u.position || '店长') + ' · ' + (u.store_id ? '门店 ID ' + u.store_id : '总部');
+        document.getElementById('avatar').textContent = String(u.name || '店').slice(-1);
+        return Promise.all([
+          LP.get('/api/workbench'),
+          LP.get('/api/audits').catch(function (e) { return null; })
+        ]);
+      }).then(function (arr) {
+        var wb = arr[0] || {};
+        var audits = arr[1];
+
+        document.getElementById('monthLabel').textContent = wb.month || LP.nowMonth();
+        var cells = [
+          [LP.fmt.money(wb.perf), '本月业绩', true],
+          [LP.fmt.num(wb.verify_count), '核销笔数', false],
+          [LP.fmt.money(wb.card_amount), '开卡金额', false],
+          [LP.fmt.num(wb.pending_verify), '待核销', false]
+        ];
+        document.getElementById('stats').innerHTML = cells.map(function (c) {
+          return '<div><div class="n' + (c[2] ? ' red' : '') + '">' + LP.esc(c[0]) + '</div>' +
+            '<div class="l">' + LP.esc(c[1]) + '</div></div>';
+        }).join('');
+
+        var auditCount = audits ? audits.length : null;
+        var bell = document.getElementById('bell');
+        bell.textContent = auditCount ? '🔔 ' + auditCount : '🔔';
+
+        var last = (wb.attendance && wb.attendance[0]) || null;
+        var clockText = last
+          ? LP.fmt.date(last.date) + ' ' + (last.check_in || '—') + (last.check_out ? ' ~ ' + last.check_out : ' · 未下班')
+          : '今日未打卡';
+
+        var todos = [
+          { href: 'verify.html?status=' + encodeURIComponent('待核销'), label: '待核销核销单', val: LP.fmt.num(wb.pending_verify) + ' 单' },
+          { href: 'employees.html?tab=audit', label: '待审核注册申请', val: auditCount === null ? '—' : auditCount + ' 人' },
+          { href: 'clockin.html', label: '考勤打卡', val: clockText },
+          { href: 'customers.html', label: '本店客户总数', val: LP.fmt.num(wb.customers) + ' 人' }
+        ];
+        todoEl.innerHTML = todos.map(function (t) {
+          return '<a class="todo-item" href="' + t.href + '"><span>' + LP.esc(t.label) + '</span>' +
+            '<b>' + LP.esc(t.val) + '</b><em>›</em></a>';
+        }).join('');
+        document.getElementById('todoHint').textContent = wb.month ? '截至 ' + wb.month : '';
+
+        var bds = wb.birthdays || [];
+        document.getElementById('bdHint').textContent = bds.length ? bds.length + ' 位客户' : '';
+        if (!bds.length) {
+          bdEl.innerHTML = LP.empty('近期暂无生日客户');
+        } else {
+          bdEl.innerHTML = bds.map(function (b) {
+            var dts = daysTo(b.birthday);
+            var txt = dts === null ? '—' : LP.fmt.birthday(dts);
+            return '<div class="bd-row"><span class="n">' + LP.esc(b.name || '—') + '</span>' +
+              '<span>' + LP.esc(String(b.birthday || '').slice(5) || '—') + ' · ' + LP.esc(txt) + '</span></div>';
+          }).join('');
+        }
+      }).catch(function (e) {
+        if (!e || e.message === '未登录' || e.message === '无权访问') return;
+        LP.toast(e.message || '加载失败', 'error');
+        todoEl.innerHTML = LP.empty('数据加载失败', '⚠');
+        bdEl.innerHTML = LP.empty('数据加载失败', '⚠');
+      });
+    })();
+  </script>
+</body>
+</html>

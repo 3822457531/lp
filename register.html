@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>员工注册 · 兰瓶美业</title>
+<link rel="stylesheet" href="/assets/css/lp-app.css" />
+<style>
+  .reg-page { min-height: 100vh; background: #faf8f6; padding: 40px 20px; display: flex; justify-content: center;
+    background-image: radial-gradient(circle at 12% 8%, #fdeef2 0%, transparent 45%), radial-gradient(circle at 90% 88%, #f3ece5 0%, transparent 42%); }
+  .reg-card { width: 100%; max-width: 520px; background: #fff; border-radius: 20px; padding: 34px 32px 30px;
+    box-shadow: 0 20px 60px rgba(120, 96, 82, 0.12); align-self: flex-start; }
+  .reg-card h1 { font-size: 20px; color: #2f2a27; font-weight: 600; }
+  .reg-card p.sub { font-size: 13px; color: #8b8178; margin: 8px 0 24px; line-height: 1.7; }
+  .reg-card .lp-form { grid-template-columns: 1fr; }
+  .reg-card .btn-primary { width: 100%; padding: 13px; border: none; border-radius: 12px; cursor: pointer;
+    background: linear-gradient(135deg, #e85a7a, #d9556f); color: #fff; font-size: 15px; font-weight: 600; margin-top: 6px; }
+  .reg-card .btn-primary:disabled { opacity: .65; cursor: default; }
+  .reg-card .back { display: block; text-align: center; margin-top: 16px; font-size: 13px; color: #8b8178; text-decoration: none; }
+  .reg-card .back:link, .reg-card .back:visited { color: #8b8178; }
+  .ok-box { text-align: center; padding: 20px 0 8px; }
+  .ok-box .ico { width: 56px; height: 56px; border-radius: 50%; background: #eef7f1; color: #38905f;
+    display: flex; align-items: center; justify-content: center; font-size: 26px; margin: 0 auto 16px; }
+  .ok-box h2 { font-size: 18px; color: #2f2a27; }
+  .ok-box p { font-size: 13px; color: #8b8178; line-height: 1.8; margin-top: 10px; }
+  .rule-list { margin-top: 18px; background: #fdfaf8; border-radius: 12px; padding: 14px 16px; font-size: 12.5px; color: #8b6f5e; line-height: 2; }
+  .rule-list b { color: #c0455f; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="reg-page">
+  <div class="reg-card">
+    <div id="formWrap">
+      <h1>员工注册</h1>
+      <p class="sub">兰瓶美业内部系统账号注册。提交后由<strong>店长 / 管理员</strong>审核，审核通过即获得对应权限（店长权限 / 普通员工权限）。</p>
+
+      <form id="regForm" class="lp-form">
+        <div class="lp-form-item">
+          <label>姓名 <em>*</em></label>
+          <input class="lp-field" name="name" placeholder="请输入真实姓名" maxlength="20" />
+        </div>
+        <div class="lp-form-item">
+          <label>手机号 <em>*</em></label>
+          <input class="lp-field" name="phone" type="tel" inputmode="numeric" maxlength="11" placeholder="用于登录的 11 位手机号" />
+        </div>
+        <div class="lp-form-item">
+          <label>所属门店 <em>*</em></label>
+          <select class="lp-field" name="store_id" id="storeSel"><option value="">加载中…</option></select>
+        </div>
+        <div class="lp-form-item">
+          <label>申请岗位</label>
+          <select class="lp-field" name="apply_role">
+            <option value="staff">普通员工</option>
+            <option value="manager">店长</option>
+          </select>
+        </div>
+        <div class="lp-form-item">
+          <label>登录密码 <em>*</em></label>
+          <input class="lp-field" name="password" type="password" placeholder="至少 6 位" autocomplete="new-password" />
+        </div>
+        <div class="lp-form-item">
+          <label>确认密码 <em>*</em></label>
+          <input class="lp-field" name="password2" type="password" placeholder="再次输入密码" autocomplete="new-password" />
+        </div>
+        <div class="lp-form-item">
+          <button class="btn-primary" type="submit" id="regBtn">提交注册申请</button>
+        </div>
+      </form>
+      <div class="rule-list">
+        <div>· 注册后账号状态为<b>待审核</b>，审核通过前无法登录；</div>
+        <div>· 申请店长岗位需管理员在「审核管理」中授予店长权限；</div>
+        <div>· 同一手机号只能注册一个账号。</div>
+      </div>
+      <a class="back" href="/login.html">已有账号？返回登录</a>
+    </div>
+
+    <div id="okWrap" style="display:none">
+      <div class="ok-box">
+        <div class="ico">✓</div>
+        <h2>注册申请已提交</h2>
+        <p>你的账号正在等待门店店长 / 管理员审核。<br />审核通过后即可用手机号登录系统。</p>
+        <div class="rule-list" id="okInfo"></div>
+        <a class="back" href="/login.html">返回登录</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/assets/js/lp-api.js"></script>
+<script>
+(function () {
+  var form = document.getElementById('regForm');
+  var storeSel = document.getElementById('storeSel');
+  var btn = document.getElementById('regBtn');
+
+  LP.get('/api/public/stores').then(function (list) {
+    storeSel.innerHTML = '<option value="">请选择门店</option>' + (list || []).map(function (s) {
+      return '<option value="' + s.id + '">' + LP.esc(s.name) + (s.address ? '（' + LP.esc(s.address) + '）' : '') + '</option>';
+    }).join('');
+    var store = LP.param('store_id');
+    if (store) storeSel.value = store;
+  }).catch(function (e) {
+    storeSel.innerHTML = '<option value="">门店加载失败</option>';
+    LP.toast(e.message, 'error');
+  });
+
+  var phoneEl = form.querySelector('[name="phone"]');
+  phoneEl.addEventListener('input', function () {
+    this.value = this.value.replace(/\D/g, '').slice(0, 11);
+  });
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var d = {};
+    LP.$$('input,select', form).forEach(function (el) { d[el.name] = el.value.trim(); });
+
+    if (!d.name) return LP.toast('请填写姓名', 'error');
+    if (!/^1\d{10}$/.test(d.phone)) return LP.toast('请输入正确的手机号', 'error');
+    if (!d.store_id) return LP.toast('请选择所属门店', 'error');
+    if (d.password.length < 6) return LP.toast('密码至少 6 位', 'error');
+    if (d.password !== d.password2) return LP.toast('两次输入的密码不一致', 'error');
+
+    btn.disabled = true;
+    btn.textContent = '提交中…';
+    LP.register({
+      name: d.name,
+      phone: d.phone,
+      password: d.password,
+      store_id: Number(d.store_id),
+      apply_role: d.apply_role,
+    }).then(function (res) {
+      document.getElementById('formWrap').style.display = 'none';
+      document.getElementById('okWrap').style.display = 'block';
+      var storeText = storeSel.options[storeSel.selectedIndex].textContent;
+      document.getElementById('okInfo').innerHTML =
+        '<div>姓名：' + LP.esc(d.name) + '</div>' +
+        '<div>手机号：' + LP.esc(d.phone) + '</div>' +
+        '<div>门店：' + LP.esc(storeText) + '</div>' +
+        '<div>申请岗位：' + (d.apply_role === 'manager' ? '店长' : '普通员工') + '</div>' +
+        '<div>当前状态：<b>待审核</b></div>';
+    }).catch(function (err) {
+      btn.disabled = false;
+      btn.textContent = '提交注册申请';
+      LP.toast(err.message, 'error');
+    });
+  });
+})();
+</script>
+</body>
+</html>

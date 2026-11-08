@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>我的考核 · 兰瓶美业</title>
+  <link rel="stylesheet" href="../css/mobile-app.css" />
+  <link rel="stylesheet" href="../assets/css/lp-app.css" />
+  <link rel="stylesheet" href="staff.css" />
+<link rel="stylesheet" href="../assets/css/polish-mobile.css" />
+</head>
+<body>
+  <div class="phone-page">
+    <div class="phone">
+      <div class="status-bar"><span>9:41</span><span>●●●</span></div>
+      <div class="phone-body no-tab" id="body">
+        <div class="nav-bar"><a class="back" href="home.html">‹</a><h1>我的考核</h1></div>
+        <div id="chips"></div>
+        <div id="main"><div class="st-load">加载中…</div></div>
+        <div class="pad-bottom"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../assets/js/lp-api.js"></script>
+  <script src="../assets/js/lp-mock.js?v=47"></script>
+  <script src="staff.js"></script>
+  <script>
+    (function () {
+      'use strict';
+      var user = LP.user() || {};
+      var month = LP.nowMonth();
+
+      STAFF.guard().then(function (me) {
+        user = me || user;
+        renderChips();
+        bind();
+        return load();
+      }).catch(function () { });
+
+      function months() {
+        var out = [];
+        for (var i = 0; i < 3; i++) {
+          var m = LP.monthsBack(i);
+          out.push([m, LP.fmt.month(m)]);
+        }
+        return out;
+      }
+
+      function renderChips() {
+        LP.mount('#chips', STAFF.chips(months(), month, 'v'));
+      }
+
+      function bind() {
+        LP.on('#chips', 'click', '.chip', function () {
+          month = this.getAttribute('data-v');
+          renderChips();
+          load();
+        });
+      }
+
+      function load() {
+        LP.mount('#main', '<div class="st-load">加载中…</div>');
+        return LP.get('/api/assessments/result', { month: month }).then(function (d) {
+          var list = (d && d.list) || [];
+          var me = null;
+          for (var i = 0; i < list.length; i++) {
+            if (String(list[i].user_id) === String(user.id) || list[i].user_name === user.name) { me = list[i]; break; }
+          }
+          render(me, d);
+        }).catch(function (e) {
+          LP.mount('#main', '<div class="st-err">' + STAFF.esc(e.message) + '</div>');
+        });
+      }
+
+      function render(me, d) {
+        if (!me) {
+          LP.mount('#main', STAFF.empty('本月暂无考核数据，考核结果生成后在此查看', '📊'));
+          return;
+        }
+        var total = Number(me.total || (me.items || []).length || 0);
+        var passed = Number(me.passed || 0);
+        var percent = total ? Math.round(passed / total * 100) : 0;
+        var deg = Math.round(percent / 100 * 360);
+
+        var html = '<div style="padding:16px 16px 4px;text-align:center;">' +
+          '<div class="score-ring" style="background:conic-gradient(var(--pink) 0deg ' + deg + 'deg, #f1f1f4 ' + deg + 'deg 360deg);margin:0 auto;">' +
+          '<div class="score-center"><div class="big">' + passed + '/' + (total || '—') + '</div>' +
+          '<div class="sub">达标 · ' + percent + '%</div></div></div>' +
+          '<div class="st-muted" style="margin-top:12px;">' + STAFF.esc(LP.fmt.month(month)) +
+          ' · ' + STAFF.esc(me.position || '员工') + '</div>' +
+          '<div style="margin-top:6px;font-size:14px;color:var(--pink);font-weight:700;">' +
+          (me.reward ? '奖励 ' + STAFF.money(me.reward) : (me.qualified ? '已达标' : '未达标')) + '</div>' +
+          '</div>';
+
+        var items = me.items || [];
+        html += '<div class="section-hd">考核项（' + items.length + '）</div>';
+        if (!items.length) {
+          html += '<div class="st-muted" style="padding:0 16px 12px;">暂无考核项</div>';
+        } else {
+          html += '<div style="background:#fff;margin-bottom:12px;">';
+          for (var i = 0; i < items.length; i++) {
+            var it = items[i];
+            var ok = !!it.pass;
+            html += '<div class="assess-row ' + (ok ? 'ok' : '') + '">' +
+              '<div class="a-ico">' + (ok ? '✓' : '✕') + '</div>' +
+              '<div class="a-main"><h4>' + STAFF.esc(it.name || it.metric_label || '指标') + '</h4>' +
+              '<p>目标 ' + STAFF.esc(it.target === undefined || it.target === null ? '—' : it.target) +
+              ' · 实际 ' + STAFF.esc(it.actual === undefined || it.actual === null ? '—' : it.actual) +
+              (it.metric_label ? ' · ' + STAFF.esc(it.metric_label) : '') + '</p></div>' +
+              '<div class="a-reward">' + (it.reward ? STAFF.money(it.reward) : '') + '</div>' +
+              '</div>';
+          }
+          html += '</div>';
+        }
+        LP.mount('#main', html);
+      }
+    })();
+  </script>
+</body>
+</html>

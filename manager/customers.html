@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>客户管理 · 兰瓶美业</title>
+  <link rel="stylesheet" href="../css/mobile-app.css" />
+  <link rel="stylesheet" href="../assets/css/lp-app.css" />
+  <style>
+    .search-box input { width: 100%; background: transparent; font-size: 13px; height: 100%; border: none; outline: none; color: var(--text); }
+    .list-card.row { cursor: pointer; }
+    .list-card .row { cursor: pointer; }
+    .fab { position: fixed; bottom: 84px; z-index: 30; box-shadow: 0 6px 18px rgba(232,90,122,.35); }
+    .list-card.row:active { background: #fafafa; }
+    .list-card .info h4 { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .list-card .info p { word-break: break-word; }
+    .dl { display: flex; flex-wrap: wrap; margin: 0 -6px; }
+    .dl > div { width: 50%; box-sizing: border-box; padding: 6px; font-size: 13px; line-height: 1.5; word-break: break-word; }
+    .dl > div em { font-style: normal; color: var(--text-2); margin-right: 6px; }
+    .blk-h { font-size: 13px; font-weight: 600; margin: 14px 0 6px; padding-left: 8px; border-left: 3px solid var(--pink); }
+    .mini { border: 1px solid var(--border); border-radius: 10px; padding: 9px 11px; margin-bottom: 8px; font-size: 13px; }
+    .mini .t { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+    .mini .s { color: var(--text-2); font-size: 12px; margin-top: 4px; }
+    .mini .s b { color: var(--pink); font-weight: 600; }
+  </style>
+<link rel="stylesheet" href="../assets/css/polish-mobile.css" />
+</head>
+<body>
+  <div class="phone-page">
+    <div class="phone">
+      <div class="status-bar" style="background:#f8a0b4;color:#fff;"><span>9:41</span><span>兰瓶</span><span>●●●</span></div>
+      <div class="phone-body">
+        <div class="nav-bar">
+          <a class="back" href="home.html">‹</a>
+          <h1>客户管理</h1>
+          <span class="right" id="addBtn">+ 新增</span>
+        </div>
+
+        <div class="search-row">
+          <div class="search-box"><input id="q" type="search" placeholder="搜索姓名 / 手机号" /></div>
+        </div>
+
+        <div class="tabs-row">
+          <span class="active" data-level="">全部</span>
+          <span data-level="金卡">金卡</span>
+          <span data-level="银卡">银卡</span>
+          <span data-level="黑金">黑金</span>
+          <span data-level="普通">普通</span>
+        </div>
+
+        <div class="section-hd">本店客户 <span id="countHint">—</span></div>
+        <div id="list"></div>
+      </div>
+
+      <a class="fab" href="javascript:;" id="fab">+ 新增客户</a>
+
+      <nav class="tab-bar">
+        <a href="home.html"><span class="dot"></span>首页</a>
+        <a class="active" href="customers.html"><span class="dot"></span>客户</a>
+        <a href="verify.html"><span class="dot"></span>核销</a>
+        <a href="mine.html"><span class="dot"></span>我的</a>
+      </nav>
+    </div>
+  </div>
+
+  <script src="../assets/js/lp-api.js"></script>
+  <script src="../assets/js/lp-mock.js?v=47"></script>
+  <script>
+    (function () {
+      'use strict';
+      var me = null;
+      var raw = [];
+      var level = '';
+      var listEl = document.getElementById('list');
+
+      function rowHtml(c) {
+        var av = LP.avatar(c.name || '客', c.avatar ? '../' + c.avatar : '');
+        return '<div class="list-card" data-id="' + c.id + '"><div class="row">' + av +
+          '<div class="info"><h4>' + LP.esc(c.name || '—') + LP.tag(c.level || '普通') + '</h4>' +
+          '<p>' + LP.esc(LP.fmt.phone(c.phone)) + '</p>' +
+          '<p>到店 ' + LP.fmt.num(c.visit_count || 0) + ' 次 · 有效卡 ' + LP.fmt.num(c.active_cards || 0) + ' 张</p></div>' +
+          '<div class="actions"><span class="price">' + LP.esc(LP.fmt.money(c.total_spend || 0)) + '</span></div></div></div>';
+      }
+
+      function paint() {
+        var rows = level ? raw.filter(function (c) { return (c.level || '普通') === level; }) : raw;
+        document.getElementById('countHint').textContent = rows.length + ' / ' + raw.length + ' 人';
+        if (!rows.length) {
+          listEl.innerHTML = LP.empty(level ? '该等级暂无客户' : '暂无客户，点右上角新增');
+          return;
+        }
+        listEl.innerHTML = rows.map(rowHtml).join('');
+      }
+
+      function load() {
+        listEl.innerHTML = LP.skeleton(4);
+        var q = document.getElementById('q').value.trim();
+        LP.get('/api/customers', { q: q }).then(function (d) {
+          raw = (d && d.list) || [];
+          paint();
+        }).catch(function (e) {
+          listEl.innerHTML = LP.empty('客户加载失败', '⚠');
+          LP.toast(e.message || '加载失败', 'error');
+        });
+      }
+
+      function detailHtml(c) {
+        var h = '<div class="dl">' +
+          '<div><em>手机</em>' + LP.esc(c.phone || '—') + '</div>' +
+          '<div><em>性别</em>' + LP.esc(c.gender || '—') + '</div>' +
+          '<div><em>生日</em>' + LP.esc(c.birthday || '—') + '</div>' +
+          '<div><em>等级</em>' + LP.esc(c.level || '—') + '</div>' +
+          '<div><em>来源</em>' + LP.esc(c.source || '—') + '</div>' +
+          '<div><em>门店</em>' + LP.esc(c.store_name || '—') + '</div>' +
+          '<div><em>累计消费</em>' + LP.esc(LP.fmt.money(c.total_spend || 0)) + '</div>' +
+          '<div><em>到店次数</em>' + LP.esc(LP.fmt.num(c.visit_count || 0)) + ' 次</div>' +
+          '<div><em>建档</em>' + LP.esc(LP.fmt.date(c.created_at)) + '</div>' +
+          '<div><em>生日提醒</em>' + LP.esc(c.birthday_remind ? '开启' : '关闭') + '</div>' +
+          '</div>' +
+          (c.note ? '<div class="blk-h">备注</div><p style="font-size:13px;color:var(--text-2);word-break:break-word;">' + LP.esc(c.note) + '</p>' : '');
+
+        var cards = c.cards || [];
+        h += '<div class="blk-h">卡项（' + cards.length + '）</div>';
+        h += cards.length ? cards.map(function (x) {
+          return '<div class="mini"><div class="t"><b>' + LP.esc(x.project_name || '—') + '</b>' + LP.tag(x.status || '') + '</div>' +
+            '<div class="s">次数 已用 ' + LP.esc(x.used_times === undefined ? '—' : x.used_times) + ' / 共 ' +
+            LP.esc(x.total_times === undefined ? '—' : x.total_times) +
+            ' · 实收 ' + LP.esc(LP.fmt.money(x.paid_amount || x.amount || 0)) + '</div>' +
+            '<div class="s">单号 ' + LP.esc(x.order_no || '—') + ' · 到期 ' + LP.esc(x.expire_at || '—') + '</div></div>';
+        }).join('') : '<div class="mini" style="color:var(--text-3)">暂无卡项</div>';
+
+        var vs = c.verifications || [];
+        h += '<div class="blk-h">核销（' + vs.length + '）</div>';
+        h += vs.length ? vs.map(function (v) {
+          var its = v.items;
+          if (typeof its === 'string') { try { its = JSON.parse(its); } catch (err) { its = []; } }
+          var names = (its || []).map(function (i) { return i.name || ''; }).filter(Boolean).join('、') || (v.project_name || '—');
+          return '<div class="mini"><div class="t"><b>' + LP.esc(names) + '</b>' + LP.tag(v.status || '') + '</div>' +
+            '<div class="s">' + LP.esc(LP.fmt.datetime(v.confirmed_at || v.created_at)) + ' · 金额 <b>' +
+            LP.esc(LP.fmt.money(v.total_amount || v.amount || 0)) + '</b></div></div>';
+        }).join('') : '<div class="mini" style="color:var(--text-3)">暂无核销记录</div>';
+
+        var aps = c.appointments || [];
+        h += '<div class="blk-h">预约（' + aps.length + '）</div>';
+        h += aps.length ? aps.map(function (a) {
+          return '<div class="mini"><div class="t"><b>' + LP.esc(LP.fmt.datetime(a.start_time)) + '</b>' + LP.tag(a.status || '') + '</div>' +
+            '<div class="s">项目 ' + LP.esc(a.project_name || ('#' + (a.project_id || '—'))) + (a.remark ? ' · ' + LP.esc(a.remark) : '') + '</div></div>';
+        }).join('') : '<div class="mini" style="color:var(--text-3)">暂无预约</div>';
+
+        return h;
+      }
+
+      function openDetail(id) {
+        var m = LP.modal({ title: '客户详情', body: LP.skeleton(4), width: 620, footer: null });
+        LP.get('/api/customers/' + id).then(function (c) {
+          m.body.innerHTML = detailHtml(c);
+        }).catch(function (e) {
+          m.body.innerHTML = LP.empty('客户详情加载失败', '⚠');
+          LP.toast(e.message || '加载失败', 'error');
+        });
+      }
+
+      function openCreate() {
+        LP.formModal({
+          title: '新增客户',
+          okText: '保存',
+          desc: '门店新增客户后不可修改资料，如需修正请联系总部。',
+          schema: [
+            { name: 'name', label: '姓名', required: true, placeholder: '客户姓名' },
+            { name: 'phone', label: '手机号', required: true, type: 'tel', placeholder: '11 位手机号' },
+            { name: 'gender', label: '性别', type: 'select', value: '女', options: ['女', '男'] },
+            { name: 'birthday', label: '生日', type: 'date' },
+            { name: 'level', label: '等级', type: 'select', value: '普通', options: ['普通', '银卡', '金卡', '黑金'] },
+            { name: 'source', label: '来源', type: 'select', value: '门店到店', options: ['门店到店', '线上预约', '老带新', '异业合作', '总部导入'] },
+            { name: 'birthday_remind', label: '生日提醒', type: 'select', value: '1', options: [{ label: '开启', value: '1' }, { label: '关闭', value: '0' }] },
+            { name: 'note', label: '备注', type: 'textarea', full: true, rows: 2, placeholder: '肤质、偏好等' }
+          ],
+          onSubmit: function (out) {
+            if (!/^1\d{10}$/.test(out.phone)) throw new Error('手机号需为 11 位数字');
+            return LP.post('/api/customers', {
+              name: out.name, phone: out.phone, gender: out.gender, birthday: out.birthday || null,
+              level: out.level, source: out.source, note: out.note,
+              birthday_remind: out.birthday_remind === '1' ? 1 : 0
+            }).then(function () {
+              LP.toast('客户已新增', 'success');
+              load();
+            });
+          }
+        });
+      }
+
+      document.getElementById('addBtn').addEventListener('click', openCreate);
+      document.getElementById('fab').addEventListener('click', openCreate);
+
+      document.getElementById('q').addEventListener('input', LP.debounce(load, 320));
+
+      LP.$$('.tabs-row span').forEach(function (s) {
+        s.addEventListener('click', function () {
+          LP.$$('.tabs-row span').forEach(function (x) { x.classList.remove('active'); });
+          s.classList.add('active');
+          level = s.getAttribute('data-level') || '';
+          paint();
+        });
+      });
+
+      listEl.addEventListener('click', function (e) {
+        var row = e.target.closest('.list-card.row');
+        if (row) openDetail(row.getAttribute('data-id'));
+      });
+
+      LP.requireRoles(['manager']).then(function (u) {
+        me = u;
+        load();
+      }).catch(function () { /* 未登录由 SDK 跳转 */ });
+    })();
+  </script>
+</body>
+</html>

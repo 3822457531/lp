@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>考核情况 · 兰瓶美业</title>
+  <link rel="stylesheet" href="../css/mobile-app.css" />
+  <link rel="stylesheet" href="../assets/css/lp-app.css" />
+  <style>
+    .month-row { display: flex; align-items: center; gap: 10px; margin: 0 14px 10px; }
+    .month-row input { flex: 1; height: 40px; border: 1px solid var(--border); border-radius: 10px; padding: 0 10px; font-size: 13px; background: #fff; color: var(--text); }
+    .sum-card { display: flex; margin: 0 14px 10px; background: linear-gradient(135deg,#ffe1e9,#fff3f6); border-radius: 14px; padding: 14px; }
+    .sum-card > div { flex: 1; text-align: center; }
+    .sum-card .n { font-size: 18px; font-weight: 700; color: #d94a6b; }
+    .sum-card .l { font-size: 12px; color: var(--text-2); margin-top: 4px; }
+    .list-card .info h4 .price { margin-left: auto; font-size: 15px; }
+    .list-card .info p { margin: 2px 0; }
+    .it { margin-top: 10px; }
+    .it .row1 { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; }
+    .it .row1 .nm { color: var(--text); }
+    .it .row1 .vl { color: var(--text-2); white-space: nowrap; }
+    .it .bar { height: 6px; border-radius: 4px; background: #f1f2f4; margin-top: 6px; overflow: hidden; }
+    .it .bar i { display: block; height: 100%; border-radius: 4px; background: var(--pink); }
+    .it .bar i.ok { background: #3fbf7f; }
+    .it .rw { font-size: 11px; color: var(--text-2); margin-top: 4px; }
+  </style>
+<link rel="stylesheet" href="../assets/css/polish-mobile.css" />
+</head>
+<body>
+  <div class="phone-page">
+    <div class="phone">
+      <div class="status-bar" style="background:#f8a0b4;color:#fff;"><span>9:41</span><span>兰瓶</span><span>●●●</span></div>
+      <div class="phone-body">
+        <div class="nav-bar">
+          <a class="back" href="home.html">‹</a>
+          <h1>考核情况</h1>
+          <span class="right" id="refresh">↻</span>
+        </div>
+
+        <div class="month-row">
+          <input type="month" id="month" />
+        </div>
+
+        <div class="sum-card">
+          <div><div class="n" id="sumQualified">—</div><div class="l">达标人数</div></div>
+          <div><div class="n" id="sumTotal">—</div><div class="l">考核人数</div></div>
+          <div><div class="n" id="sumReward">—</div><div class="l">考核奖励</div></div>
+        </div>
+
+        <div class="section-hd">员工考核明细 <span id="countHint">—</span></div>
+        <div id="list" style="padding-bottom:8px;"></div>
+      </div>
+
+      <nav class="tab-bar">
+        <a href="home.html"><span class="dot"></span>首页</a>
+        <a href="customers.html"><span class="dot"></span>客户</a>
+        <a href="verify.html"><span class="dot"></span>核销</a>
+        <a href="mine.html"><span class="dot"></span>我的</a>
+      </nav>
+    </div>
+  </div>
+
+  <script src="../assets/js/lp-api.js"></script>
+  <script src="../assets/js/lp-mock.js?v=47"></script>
+  <script>
+    (function () {
+      'use strict';
+      var me = null;
+      var listEl = document.getElementById('list');
+
+      function cardHtml(u) {
+        var items = u.items || [];
+        var body = items.map(function (i) {
+          var pct = Math.max(0, Math.min(100, Number(i.percent || 0)));
+          return '<div class="it"><div class="row1"><span class="nm">' + LP.esc(i.name || '—') +
+            (i.scope ? '（' + LP.esc(i.scope) + '）' : '') + '</span>' +
+            '<span class="vl">' + LP.esc(i.actual === undefined ? '—' : i.actual) + ' / ' + LP.esc(i.target === undefined ? '—' : i.target) +
+            (i.pass ? ' ✓' : '') + '</span></div>' +
+            '<div class="bar"><i class="' + (i.pass ? 'ok' : '') + '" style="width:' + pct + '%"></i></div>' +
+            (i.reward ? '<div class="rw">奖励 ' + LP.esc(LP.fmt.money(i.reward)) + '</div>' : '') +
+            '</div>';
+        }).join('');
+        return '<div class="list-card">' +
+          '<div class="info"><h4>' + LP.esc(u.user_name || '—') + LP.tag(u.qualified ? '合格' : '未达标') +
+          '<span class="price">' + LP.esc((u.passed || 0) + '/' + (u.total || 0)) + '</span></h4>' +
+          '<p>' + LP.esc(u.position || '—') + ' · ' + LP.esc(u.store_name || '—') +
+          (u.reward ? ' · 奖励 ' + LP.esc(LP.fmt.money(u.reward)) : '') + '</p>' +
+          body + '</div></div>';
+      }
+
+      function load() {
+        listEl.innerHTML = LP.skeleton(3);
+        var month = document.getElementById('month').value || LP.nowMonth();
+        LP.get('/api/assessments/result', { month: month }).then(function (d) {
+          var rows = (d && d.list) || [];
+          var qualified = rows.filter(function (x) { return x.qualified; }).length;
+          var reward = rows.reduce(function (s, x) { return s + Number(x.reward || 0); }, 0);
+          document.getElementById('sumQualified').textContent = qualified + ' 人';
+          document.getElementById('sumTotal').textContent = rows.length + ' 人';
+          document.getElementById('sumReward').textContent = LP.fmt.money(reward);
+          document.getElementById('countHint').textContent = (d && d.month) || month;
+          if (!rows.length) { listEl.innerHTML = LP.empty('该月暂无考核数据'); return; }
+          listEl.innerHTML = rows.map(cardHtml).join('');
+        }).catch(function (e) {
+          listEl.innerHTML = LP.empty('考核数据加载失败', '⚠');
+          LP.toast(e.message || '加载失败', 'error');
+        });
+      }
+
+      document.getElementById('month').addEventListener('change', load);
+      document.getElementById('refresh').addEventListener('click', load);
+
+      LP.requireRoles(['manager']).then(function (u) {
+        me = u;
+        document.getElementById('month').value = LP.nowMonth();
+        load();
+      }).catch(function () {});
+    })();
+  </script>
+</body>
+</html>

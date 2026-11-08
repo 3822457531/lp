@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>系统设置 · 兰瓶管理后台</title>
+  <link rel="stylesheet" href="css/admin.css" />
+  <link rel="stylesheet" href="../assets/css/lp-app.css" />
+  <link rel="stylesheet" href="../assets/css/polish.css" />
+</head>
+<body data-page="settings">
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <div class="main">
+      <header class="topbar">
+        <div class="topbar-title">系统设置 <span>门店提醒、短信与小程序入口</span></div>
+        <div class="topbar-actions" id="top-user"></div>
+      </header>
+      <div class="content">
+        <div class="panel">
+          <div class="panel-hd">
+            <h3>门店设置</h3>
+            <button class="btn" id="btn-save">保存设置</button>
+          </div>
+          <div class="panel-bd">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px 24px;" id="form"></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-hd"><h3>近期生日客户</h3><span style="font-size:12px;color:#9aa3b2;">未来 7 天</span></div>
+          <div class="lp-scroll-x" id="birthday"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-hd"><h3>短信发送记录</h3><span style="font-size:12px;color:#9aa3b2;">最近 12 条</span></div>
+          <div class="lp-scroll-x" id="sms"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../assets/js/lp-api.js"></script>
+  <script src="../assets/js/lp-mock.js?v=47"></script>
+  <script src="js/layout.js"></script>
+  <script>
+  (function () {
+    'use strict';
+    var CFG = {};
+
+    function err(e) { LP.toast((e && e.message) || '操作失败', 'error'); }
+
+    function fieldRow(label, key, type, hint, options) {
+      var v = CFG[key] === undefined || CFG[key] === null ? '' : CFG[key];
+      var ctrl;
+      if (type === 'switch') {
+        ctrl = '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;">' +
+          '<input type="checkbox" data-k="' + key + '" ' + (v ? 'checked' : '') + ' style="width:16px;height:16px;accent-color:#9a7d6f;" />' +
+          '<span style="font-size:13px;color:#67707f;">' + (v ? '已开启' : '已关闭') + '</span></label>';
+      } else if (type === 'select') {
+        ctrl = '<select class="field" data-k="' + key + '" style="width:100%;">' + options.map(function (o) {
+          return '<option value="' + LP.esc(o) + '" ' + (o === v ? 'selected' : '') + '>' + LP.esc(o) + '</option>';
+        }).join('') + '</select>';
+      } else {
+        ctrl = '<input class="field" data-k="' + key + '" type="' + (type || 'text') + '" value="' + LP.esc(v) + '" style="width:100%;" />';
+      }
+      return '<div><div style="font-size:12.5px;color:#67707f;margin-bottom:6px;">' + label + '</div>' + ctrl +
+        (hint ? '<div style="font-size:11.5px;color:#9aa3b2;margin-top:5px;">' + hint + '</div>' : '') + '</div>';
+    }
+
+    function renderForm() {
+      document.getElementById('form').innerHTML = [
+        fieldRow('系统名称', 'brand_name', 'text', '显示在登录页与小程序抬头'),
+        fieldRow('客服电话', 'service_phone', 'tel', ''),
+        fieldRow('默认门店营业时间', 'open_hours', 'text', '例如 09:30-21:00'),
+        fieldRow('预约提前量（分钟）', 'slot_minutes', 'number', '每 N 分钟一个可约时段'),
+        fieldRow('生日提前提醒天数', 'birthday_days', 'number', '生日前 N 天推送给店长'),
+        fieldRow('未到店自动取消（小时）', 'noshow_hours', 'number', '超过该时长自动释放时段')
+      ].join('');
+    }
+
+    function readForm() {
+      var out = {};
+      document.querySelectorAll('#form [data-k]').forEach(function (el) {
+        var k = el.getAttribute('data-k');
+        out[k] = el.type === 'checkbox' ? el.checked : el.value;
+      });
+      return out;
+    }
+
+    function load() {
+      LP.get('/api/settings').then(function (s) {
+        CFG = s || {};
+        renderForm();
+      }).catch(function (e) {
+        err(e);
+        document.getElementById('form').innerHTML = LP.empty('设置加载失败');
+      });
+
+      LP.get('/api/customers/birthday/upcoming').then(function (d) {
+        var rows = (d && d.list) || d || [];
+        LP.mount('#birthday', LP.table({
+          columns: [
+            { title: '客户', render: function (r) { return LP.esc(r.name || '—'); } },
+            { title: '手机号', render: function (r) { return LP.esc(LP.fmt.phone(r.phone)); } },
+            { title: '生日', render: function (r) { return LP.esc(r.birthday || '—'); } },
+            { title: '距离', render: function (r) { return LP.fmt.num(r.days_left) + ' 天'; } },
+            { title: '门店', render: function (r) { return LP.esc(r.store_name || '—'); } },
+            { title: '等级', render: function (r) { return LP.tag((r.level || '普通') + ''); } }
+          ],
+          rows: rows,
+          emptyText: '未来 7 天没有生日客户'
+        }));
+      }).catch(function () {});
+
+      LP.get('/api/sms/logs').then(function (d) {
+        var rows = (d && d.list) || d || [];
+        LP.mount('#sms', LP.table({
+          columns: [
+            { title: '发送时间', render: function (r) { return LP.esc(LP.fmt.datetime(r.created_at || r.sent_at)); } },
+            { title: '接收人', render: function (r) { return LP.esc(r.to_name || r.customer_name || '—'); } },
+            { title: '手机号', render: function (r) { return LP.esc(LP.fmt.phone(r.phone)); } },
+            { title: '场景', render: function (r) { return LP.esc(r.type || r.scene || '通知'); } },
+            { title: '状态', render: function (r) { return LP.tag(r.status || '已发送'); } }
+          ],
+          rows: rows,
+          emptyText: '暂无短信记录'
+        }));
+      }).catch(function () {});
+    }
+
+    function init(me) {
+      document.dispatchEvent(new CustomEvent('lp:user', { detail: me }));
+      load();
+      document.getElementById('btn-save').addEventListener('click', function () {
+        var body = Object.assign({}, CFG, readForm());
+        LP.put('/api/settings', body).then(function (s) {
+          CFG = s || body;
+          LP.toast('设置已保存', 'success');
+          renderForm();
+        }).catch(err);
+      });
+      document.addEventListener('change', function (e) {
+        var el = e.target;
+        if (el && el.type === 'checkbox' && el.parentNode) {
+          el.parentNode.querySelector('span').textContent = el.checked ? '已开启' : '已关闭';
+        }
+      });
+    }
+
+    LP.requireRoles(['admin']).then(init).catch(function () {});
+  })();
+  </script>
+</body>
+</html>

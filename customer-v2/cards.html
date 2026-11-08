@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>我的卡项 · 兰瓶美业</title>
+  <link rel="stylesheet" href="../css/mobile-app.css" />
+  <link rel="stylesheet" href="../assets/css/lp-app.css" />
+  <link rel="stylesheet" href="../assets/css/polish-mobile.css" />
+  <style>
+    .card-box{margin:12px 16px;border-radius:18px;padding:18px;color:#fff;position:relative;overflow:hidden;
+      background:linear-gradient(145deg,#f291ad,#d94b6d);box-shadow:0 10px 22px rgba(217,75,109,.18);}
+    .card-box.off{background:linear-gradient(145deg,#c9ccd6,#9aa1b0);box-shadow:none;}
+    .card-box .nm{font-size:16px;font-weight:600;}
+    .card-box .st{margin-top:6px;font-size:11px;opacity:.9;}
+    .card-box .big{font-size:30px;font-weight:700;margin-top:14px;font-family:var(--font-num,inherit);}
+    .card-box .big small{font-size:13px;font-weight:500;opacity:.85;margin-left:2px;}
+    .card-box .ft{display:flex;justify-content:space-between;margin-top:12px;font-size:11.5px;opacity:.92;}
+    .card-box .prog{height:5px;border-radius:3px;background:rgba(255,255,255,.3);margin-top:12px;overflow:hidden;}
+    .card-box .prog i{display:block;height:100%;background:#fff;border-radius:3px;}
+    .tabs-row{margin:12px 16px 0;}
+  </style>
+</head>
+<body>
+  <div class="phone-page">
+    <div class="phone">
+      <div class="status-bar"><span>9:41</span><span>兰瓶</span><span>●●●</span></div>
+      <div class="phone-body" id="body">
+        <div class="st-load">加载中…</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../assets/js/lp-api.js"></script>
+  <script src="../assets/js/lp-mock.js?v=47"></script>
+  <script src="customer.js"></script>
+  <script>
+    (function () {
+      'use strict';
+      var all = [], filter = '全部';
+
+      CUST.guard().then(function () {
+        CUST.mountTab('cards');
+        render();
+        return LP.get('/api/cards', { customer_id: (CUST.me() || {}).id, size: 100 }).then(function (d) {
+          all = d.list || d || [];
+          render();
+        }).catch(CUST.fail);
+      }).catch(function () { });
+
+      function live(c) { return c.status !== '已失效' && Number(c.used_times) < Number(c.total_times); }
+
+      function render() {
+        var list = all.filter(function (c) {
+          if (filter === '全部') return true;
+          if (filter === '生效中') return live(c);
+          return !live(c);
+        });
+
+        var html = CUST.nav('我的卡项', 'home.html');
+        html += '<div class="tabs-row">' +
+          ['全部', '生效中', '已用完'].map(function (t) {
+            return '<span class="' + (t === filter ? 'active' : '') + '" data-t="' + t + '">' + t + '</span>';
+          }).join('') + '</div>';
+
+        if (!list.length) {
+          html += CUST.empty('这里还没有卡项');
+          CUST.body().innerHTML = html;
+          bind();
+          return;
+        }
+
+        list.forEach(function (c) {
+          var total = Number(c.total_times) || 1, used = Number(c.used_times) || 0;
+          var left = Math.max(0, total - used);
+          var isLive = live(c);
+          html += '<div class="card-box' + (isLive ? '' : ' off') + '">' +
+            '<div class="nm">' + CUST.esc(c.project_name) + '</div>' +
+            '<div class="st">' + CUST.esc(c.card_no || '') + ' · ' + CUST.esc(c.store_name || '') + '</div>' +
+            '<div class="big">' + left + '<small>/ ' + total + ' 次</small></div>' +
+            '<div class="prog"><i style="width:' + Math.round(left / total * 100) + '%"></i></div>' +
+            '<div class="ft"><span>有效期至 ' + CUST.esc(c.expire_at || '—') + '</span><span>' + CUST.esc(c.status || '') + '</span></div>' +
+            '</div>';
+        });
+
+        html += '<div style="height:16px;"></div>';
+        CUST.body().innerHTML = html;
+        bind();
+      }
+
+      function bind() {
+        CUST.$$('.tabs-row span').forEach(function (s) {
+          s.addEventListener('click', function () { filter = s.getAttribute('data-t'); render(); });
+        });
+      }
+    })();
+  </script>
+</body>
+</html>

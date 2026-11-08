@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8" />
+<title>lp 页面自检</title>
+<style>
+body{font:13px/1.6 -apple-system,"Microsoft YaHei",sans-serif;margin:0;padding:18px;background:#f6f7fb;color:#22252b}
+h1{font-size:18px;margin:0 0 12px}
+table{border-collapse:collapse;width:100%;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.06);border-radius:10px;overflow:hidden}
+th,td{padding:7px 10px;border-bottom:1px solid #eef0f5;text-align:left;font-size:12.5px;vertical-align:top}
+th{background:#f9fafd;font-weight:600;color:#5b6270}
+.ok{color:#2f7d54}.bad{color:#c0392b;font-weight:600}.warn{color:#b7791f}
+iframe{width:1100px;height:700px;border:1px solid #dde1ea;border-radius:8px;background:#fff}
+#stage{margin-top:14px}
+code{background:#f4f5f9;padding:1px 5px;border-radius:4px}
+</style></head>
+<body>
+<h1>lp 页面自检（逐个 iframe 加载，抓 报错/空表/NaN/undefined）</h1>
+<div id="summary" style="margin-bottom:10px;color:#5b6270">准备中…</div>
+<table><thead><tr><th style="width:270px">页面</th><th style="width:70px">结果</th><th>细节</th></tr></thead><tbody id="rows"></tbody></table>
+<div id="stage"></div>
+<script>
+var PAGES = [
+      "admin/appointments.html",
+      "admin/assessment.html",
+      "admin/audit.html",
+      "admin/customers.html",
+      "admin/dashboard.html",
+      "admin/employees.html",
+      "admin/index.html",
+      "admin/projects.html",
+      "admin/recharge.html",
+      "admin/salary.html",
+      "admin/settings.html",
+      "admin/verify.html",
+      "admin/welfare.html",
+      "customer/home.html",
+      "customer/member-qr.html",
+      "customer/my-projects.html",
+      "customer/profile.html",
+      "customer/projects.html",
+      "customer/verify.html",
+      "manager/appointments.html",
+      "manager/assessment.html",
+      "manager/clockin.html",
+      "manager/customers.html",
+      "manager/employees.html",
+      "manager/home.html",
+      "manager/inventory.html",
+      "manager/login.html",
+      "manager/mine.html",
+      "manager/projects.html",
+      "manager/recharge.html",
+      "manager/settings.html",
+      "manager/verify.html",
+      "staff/appointment-list.html",
+      "staff/appointments.html",
+      "staff/assessment.html",
+      "staff/clockin.html",
+      "staff/customers.html",
+      "staff/home.html",
+      "staff/login.html",
+      "staff/messages.html",
+      "staff/mine.html",
+      "staff/salary.html",
+      "staff/verify-step1.html",
+      "staff/verify-step2.html",
+      "staff/verify-step3.html"
+    ];
+var tb = document.getElementById('rows');
+var stage = document.getElementById('stage');
+var idx = 0, stats = { ok: 0, bad: 0 };
+
+function addRow(page, cls, detail) {
+  var tr = document.createElement('tr');
+  tr.innerHTML = '<td><code>' + page + '</code></td><td class="' + cls + '">' +
+    (cls === 'ok' ? 'OK' : '异常') + '</td><td>' + detail + '</td>';
+  tb.appendChild(tr);
+}
+
+function probe(doc, win) {
+  var issues = [];
+  var text = (doc.body ? doc.body.innerText : '') || '';
+  ['加载失败', '请求失败', 'NaN', 'undefined', 'Cannot read', 'null is not', 'is not a function'].forEach(function (k) {
+    if (text.indexOf(k) > -1) issues.push('出现「' + k + '」');
+  });
+  var rows = doc.querySelectorAll('tbody tr').length;
+  var cards = doc.querySelectorAll('.stat-card, .kpi, .mini-card').length;
+  var cells = doc.querySelectorAll('.cell, .list-item, .row-item, .tile, .grid-item, .record, .item-card').length;
+  if (text.trim().length < 60) issues.push('页面基本空白（文本 ' + text.trim().length + ' 字）');
+  return { issues: issues, rows: rows, cards: cards, cells: cells };
+}
+function next() {
+  if (idx >= PAGES.length) {
+    document.getElementById('summary').textContent = '完成：' + stats.ok + ' 页正常 / ' + stats.bad + ' 页异常，共 ' + PAGES.length + ' 页';
+    return;
+  }
+  var page = PAGES[idx++];
+  var fr = document.createElement('iframe');
+  fr.src = page + '?diag=1';
+  stage.innerHTML = '';
+  stage.appendChild(fr);
+  fr.onload = function () {
+    setTimeout(function () {
+      var doc, win;
+      try { doc = fr.contentDocument; win = fr.contentWindow; } catch (e) {
+        addRow(page, 'bad', '跨域无法读取');
+        stats.bad++; next(); return;
+      }
+      var r = probe(doc, win);
+      if (r.issues.length) { stats.bad++; addRow(page, 'bad', r.issues.join('；') + '（行 ' + r.rows + ' / 卡 ' + r.cards + ' / 块 ' + r.cells + '）'); }
+      else { stats.ok++; addRow(page, 'ok', '行 ' + r.rows + ' / 卡 ' + r.cards + ' / 块 ' + r.cells); }
+      next();
+    }, 700);
+  };
+  fr.onerror = function () { addRow(page, 'bad', 'iframe 加载失败'); stats.bad++; next(); };
+}
+next();
+</script>
+</body></html>

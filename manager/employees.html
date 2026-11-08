@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>员工管理 · 兰瓶美业</title>
+  <link rel="stylesheet" href="../css/mobile-app.css" />
+  <link rel="stylesheet" href="../assets/css/lp-app.css" />
+  <style>
+    .list-card .info h4 { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .list-card .info p { word-break: break-word; }
+    .list-card .actions { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+    .list-card .actions .btn-sm { min-height: 32px; line-height: 30px; padding: 0 12px; }
+    .mini { border: 1px solid var(--border); border-radius: 10px; padding: 9px 11px; margin-bottom: 8px; font-size: 13px; }
+    .mini .t { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+    .mini .s { color: var(--text-2); font-size: 12px; margin-top: 4px; }
+    .dl { display: flex; flex-wrap: wrap; margin: 0 -6px; }
+    .dl > div { width: 50%; box-sizing: border-box; padding: 6px; font-size: 13px; word-break: break-word; }
+    .dl > div em { font-style: normal; color: var(--text-2); margin-right: 6px; }
+    .blk-h { font-size: 13px; font-weight: 600; margin: 14px 0 6px; padding-left: 8px; border-left: 3px solid var(--pink); }
+    .list-card .actions.audit-act { flex-direction: row; gap: 10px; margin-top: 10px; }
+    .list-card .actions.audit-act .btn-sm { flex: 1; min-height: 40px; line-height: 38px; }
+  </style>
+<link rel="stylesheet" href="../assets/css/polish-mobile.css" />
+</head>
+<body>
+  <div class="phone-page">
+    <div class="phone">
+      <div class="status-bar" style="background:#f8a0b4;color:#fff;"><span>9:41</span><span>兰瓶</span><span>●●●</span></div>
+      <div class="phone-body">
+        <div class="nav-bar">
+          <a class="back" href="home.html">‹</a>
+          <h1>员工管理</h1>
+          <span class="right" id="refresh">↻</span>
+        </div>
+
+        <div class="tabs-row">
+          <span class="active" data-tab="staff">本店员工</span>
+          <span data-tab="audit">待审核 <b id="auditBadge"></b></span>
+        </div>
+
+        <div class="section-hd" id="hdLeft">本店员工 <span id="countHint">—</span></div>
+        <div id="list"></div>
+      </div>
+
+      <nav class="tab-bar">
+        <a href="home.html"><span class="dot"></span>首页</a>
+        <a href="customers.html"><span class="dot"></span>客户</a>
+        <a href="verify.html"><span class="dot"></span>核销</a>
+        <a href="mine.html"><span class="dot"></span>我的</a>
+      </nav>
+    </div>
+  </div>
+
+  <script src="../assets/js/lp-api.js"></script>
+  <script src="../assets/js/lp-mock.js?v=47"></script>
+  <script>
+    (function () {
+      'use strict';
+      var me = null;
+      var tab = 'staff';
+      var listEl = document.getElementById('list');
+      var staff = [];
+      var audits = [];
+
+      function statusText(s) {
+        return ({ active: '在职', inactive: '停用', pending: '待审核' })[s] || s || '—';
+      }
+
+      function staffRow(u) {
+        var av = LP.avatar(u.name || '员', u.avatar ? '../' + u.avatar : '');
+        return '<div class="list-card"><div class="row">' + av +
+          '<div class="info"><h4>' + LP.esc(u.name || '—') + LP.tag(statusText(u.status)) + '</h4>' +
+          '<p>' + LP.esc((u.position || u.role_name || '—') + ' · ' + (u.level || '—')) + '</p>' +
+          '<p>' + LP.esc(LP.fmt.phone(u.phone)) + '</p>' +
+          '<p>本月业绩 ' + LP.esc(LP.fmt.money(u.month_perf || 0)) + ' · 核销 ' + LP.esc(LP.fmt.num(u.month_verify || 0)) + ' 笔</p></div>' +
+          '<div class="actions">' +
+          '<button class="btn-sm outline" data-info="' + u.id + '">详情</button>' +
+          '<button class="btn-sm solid" data-edit="' + u.id + '">编辑</button>' +
+          '</div></div></div>';
+      }
+
+      function paintStaff() {
+        document.getElementById('hdLeft').innerHTML = '本店员工 <span id="countHint">' + staff.length + ' 人</span>';
+        if (!staff.length) { listEl.innerHTML = LP.empty('暂无在职员工'); return; }
+        listEl.innerHTML = staff.map(staffRow).join('');
+      }
+
+      function paintAudits(items) {
+        document.getElementById('hdLeft').innerHTML = '待审核申请 <span>' + items.length + ' 人</span>';
+        if (!items.length) { listEl.innerHTML = LP.empty('暂无待审核申请'); return; }
+        listEl.innerHTML = items.map(function (u) {
+          return '<div class="list-card">' +
+            '<div class="info"><h4>' + LP.esc(u.name || '—') + LP.tag('待审核') + '</h4>' +
+            '<p>' + LP.esc(LP.fmt.phone(u.phone)) + ' · 申请岗位 ' + LP.esc(u.position || '—') +
+            ' · 门店 ' + LP.esc(u.store_name || me.store_name || '—') + '</p>' +
+            (u.note ? '<p>备注：' + LP.esc(u.note) + '</p>' : '') +
+            '</div><div class="actions audit-act">' +
+            '<button class="btn-sm outline" data-reject="' + u.id + '">拒绝</button>' +
+            '<button class="btn-sm solid" data-approve="' + u.id + '">通过</button>' +
+            '</div></div>';
+        }).join('');
+      }
+
+      function loadStaff() {
+        listEl.innerHTML = LP.skeleton(4);
+        LP.get('/api/users').then(function (arr) {
+          staff = arr || [];
+          paintStaff();
+        }).catch(function (e) {
+          listEl.innerHTML = LP.empty('员工加载失败', '⚠');
+          LP.toast(e.message || '加载失败', 'error');
+        });
+      }
+
+      function loadAudits() {
+        listEl.innerHTML = LP.skeleton(2);
+        LP.get('/api/audits').then(function (arr) {
+          audits = arr || [];
+          paintAudits(audits);
+          document.getElementById('auditBadge').textContent = audits.length ? '(' + audits.length + ')' : '';
+        }).catch(function (e) {
+          listEl.innerHTML = LP.empty('审核列表加载失败', '⚠');
+          LP.toast(e.message || '加载失败', 'error');
+        });
+      }
+
+      function load() { return tab === 'staff' ? loadStaff() : loadAudits(); }
+
+      function openEdit(id) {
+        var u = staff.filter(function (x) { return String(x.id) === String(id); })[0];
+        if (!u) return;
+        LP.formModal({
+          title: '编辑员工 · ' + (u.name || ''),
+          okText: '保存',
+          schema: [
+            { name: 'name', label: '姓名', value: u.name || '', required: true },
+            { name: 'phone', label: '手机号', value: u.phone || '', required: true, type: 'tel' },
+            { name: 'position', label: '岗位', value: u.position || '' },
+            { name: 'level', label: '职级', value: u.level || '' },
+            { name: 'status', label: '状态', type: 'select', value: u.status || 'active', options: [{ label: '在职', value: 'active' }, { label: '停用', value: 'inactive' }] },
+            { name: 'base_salary', label: '底薪', type: 'number', step: '0.01', value: u.base_salary || 0 },
+            { name: 'commission_rate', label: '提成比例', type: 'number', step: '0.01', value: u.commission_rate || 0, hint: '如 0.05 表示 5%' },
+            { name: 'card_rate', label: '开卡提成', type: 'number', step: '0.01', value: u.card_rate || 0 },
+            { name: 'note', label: '备注', type: 'textarea', full: true, rows: 2, value: u.note || '' }
+          ],
+          onSubmit: function (out) {
+            return LP.put('/api/users/' + id, {
+              name: out.name, phone: out.phone, position: out.position, level: out.level,
+              status: out.status, base_salary: Number(out.base_salary || 0),
+              commission_rate: Number(out.commission_rate || 0), card_rate: Number(out.card_rate || 0),
+              note: out.note
+            }).then(function () {
+              LP.toast('员工资料已更新', 'success');
+              load();
+            });
+          }
+        });
+      }
+
+      function openInfo(id) {
+        var m = LP.modal({ title: '员工详情', body: LP.skeleton(3), width: 600, footer: null });
+        LP.get('/api/users/' + id).then(function (u) {
+          var h = '<div class="dl">' +
+            '<div><em>姓名</em>' + LP.esc(u.name || '—') + '</div>' +
+            '<div><em>手机</em>' + LP.esc(u.phone || '—') + '</div>' +
+            '<div><em>岗位</em>' + LP.esc(u.position || '—') + '</div>' +
+            '<div><em>职级</em>' + LP.esc(u.level || '—') + '</div>' +
+            '<div><em>门店</em>' + LP.esc(u.store_name || '—') + '</div>' +
+            '<div><em>状态</em>' + LP.esc(statusText(u.status)) + '</div>' +
+            '<div><em>底薪</em>' + LP.esc(LP.fmt.money(u.base_salary || 0)) + '</div>' +
+            '<div><em>提成</em>' + LP.esc(LP.fmt.pct(u.commission_rate || 0)) + '</div>' +
+            '<div><em>本月业绩</em>' + LP.esc(LP.fmt.money(u.month_perf || 0)) + '</div>' +
+            '<div><em>本月核销</em>' + LP.esc(LP.fmt.num(u.month_verify || 0)) + ' 笔</div>' +
+            '</div>';
+          var at = u.attendance || [];
+          h += '<div class="blk-h">近期考勤</div>';
+          h += at.length ? at.slice(0, 8).map(function (a) {
+            return '<div class="mini"><div class="t"><b>' + LP.esc(a.date || '—') + '</b>' + LP.tag(a.status || '') + '</div>' +
+              '<div class="s">上班 ' + LP.esc(a.check_in || '—') + ' · 下班 ' + LP.esc(a.check_out || '—') + '</div></div>';
+          }).join('') : '<div class="mini" style="color:var(--text-3)">暂无考勤记录</div>';
+          var sa = u.salary || [];
+          h += '<div class="blk-h">工资单</div>';
+          h += sa.length ? sa.slice(0, 6).map(function (s) {
+            return '<div class="mini"><div class="t"><b>' + LP.esc(s.month || '—') + '</b><span class="price">' + LP.esc(LP.fmt.money(s.total || s.net_pay || 0)) + '</span></div>' +
+              '<div class="s">底薪 ' + LP.esc(LP.fmt.money(s.base || 0)) + ' · 提成 ' + LP.esc(LP.fmt.money((s.perf_commission || 0) + (s.card_commission || 0))) + '</div></div>';
+          }).join('') : '<div class="mini" style="color:var(--text-3)">暂无工资数据</div>';
+          m.body.innerHTML = h;
+        }).catch(function (e) {
+          m.body.innerHTML = LP.empty('详情加载失败', '⚠');
+          LP.toast(e.message || '加载失败', 'error');
+        });
+      }
+
+      function approve(id) {
+        var a = audits.filter(function (x) { return String(x.id) === String(id); })[0] || {};
+        LP.confirm('确认通过「' + (a.name || '') + '」的注册申请？通过后将归属本店。', { okText: '通过' }).then(function (ok) {
+          if (!ok) return;
+          LP.post('/api/audits/' + id + '/approve', {
+            role: 'staff', store_id: me.store_id, position: a.position || '美容师'
+          }).then(function () {
+            LP.toast('已通过审核', 'success');
+            staff = []; load();
+          }).catch(function (e) { LP.toast(e.message || '操作失败', 'error'); });
+        });
+      }
+
+      function reject(id) {
+        LP.formModal({
+          title: '拒绝申请',
+          okText: '确认拒绝',
+          schema: [{ name: 'reason', label: '拒绝原因', type: 'textarea', rows: 2, value: '资料不符', required: true, full: true }],
+          onSubmit: function (out) {
+            return LP.post('/api/audits/' + id + '/reject', { reason: out.reason }).then(function () {
+              LP.toast('已拒绝该申请', 'success');
+              staff = []; load();
+            });
+          }
+        });
+      }
+
+      listEl.addEventListener('click', function (e) {
+        var t = e.target.closest('[data-edit],[data-info],[data-approve],[data-reject]');
+        if (!t) return;
+        if (t.hasAttribute('data-edit')) openEdit(t.getAttribute('data-edit'));
+        else if (t.hasAttribute('data-info')) openInfo(t.getAttribute('data-info'));
+        else if (t.hasAttribute('data-approve')) approve(t.getAttribute('data-approve'));
+        else reject(t.getAttribute('data-reject'));
+      });
+
+      LP.$$('.tabs-row span').forEach(function (s) {
+        s.addEventListener('click', function () {
+          LP.$$('.tabs-row span').forEach(function (x) { x.classList.remove('active'); });
+          s.classList.add('active');
+          tab = s.getAttribute('data-tab');
+          load();
+        });
+      });
+
+      document.getElementById('refresh').addEventListener('click', function () { staff = []; load(); });
+
+      LP.requireRoles(['manager']).then(function (u) {
+        me = u;
+        var want = LP.param('tab');
+        if (want === 'audit') {
+          LP.$$('.tabs-row span').forEach(function (x) { x.classList.toggle('active', x.getAttribute('data-tab') === 'audit'); });
+          tab = 'audit';
+        }
+        load();
+      }).catch(function () { /* SDK 已跳转登录 */ });
+    })();
+  </script>
+</body>
+</html>

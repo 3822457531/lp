@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>UI 冒烟测试 · 兰瓶美业</title>
+<style>
+  body { font: 13px/1.5 -apple-system, "Microsoft YaHei", sans-serif; margin: 0; padding: 16px 18px 40px; background: #f6f7fa; color: #22252b; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  .sub { color: #7b8494; font-size: 12px; margin-bottom: 14px; }
+  .kpis { display: flex; gap: 10px; margin-bottom: 14px; }
+  .kpi { background: #fff; border: 1px solid #eef0f4; border-radius: 10px; padding: 10px 14px; min-width: 110px; }
+  .kpi b { display: block; font-size: 22px; font-variant-numeric: tabular-nums; }
+  .kpi span { color: #7b8494; font-size: 12px; }
+  table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid #eef0f4; border-radius: 10px; overflow: hidden; }
+  th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid #f1f3f7; font-size: 12.5px; }
+  th { background: #fafbfd; color: #5c6470; font-weight: 600; }
+  .pass { color: #12805c; font-weight: 600; }
+  .fail { color: #c4321f; font-weight: 600; }
+  .warn { color: #b26a00; font-weight: 600; }
+  code { background: #f3f4f8; padding: 1px 5px; border-radius: 4px; font-size: 11.5px; }
+  #out { display: none; }
+  .now { color: #7b8494; font-size: 12px; }
+</style>
+</head>
+<body>
+<h1>兰瓶美业原型 · 页面渲染冒烟测试</h1>
+<div class="sub">逐页 iframe 加载 → 等待 mock 数据返回 → 统计渲染节点、扫描错误关键词</div>
+<div class="kpis" id="kpis"></div>
+<div id="tbl"><div class="now">正在逐页加载…</div></div>
+<pre id="out"></pre>
+
+<script>
+(function () {
+  var PAGES = ("/admin/appointments.html,/admin/assessment.html,/admin/audit.html,/admin/customers.html,/admin/dashboard.html,/admin/employees.html,/admin/index.html,/admin/projects.html,/admin/recharge.html,/admin/salary.html,/admin/settings.html,/admin/verify.html,/admin/welfare.html,/manager/appointments.html,/manager/assessment.html,/manager/clockin.html,/manager/customers.html,/manager/employees.html,/manager/home.html,/manager/inventory.html,/manager/login.html,/manager/mine.html,/manager/projects.html,/manager/recharge.html,/manager/settings.html,/manager/verify.html,/staff/appointment-list.html,/staff/appointments.html,/staff/assessment.html,/staff/clockin.html,/staff/customers.html,/staff/home.html,/staff/login.html,/staff/messages.html,/staff/mine.html,/staff/salary.html,/staff/verify-step1.html,/staff/verify-step2.html,/staff/verify-step3.html,/customer/home.html,/customer/member-qr.html,/customer/my-projects.html,/customer/profile.html,/customer/projects.html,/customer/verify.html").split(",");
+  var WAIT = 1400;
+  var rows = [];
+
+  var ERROR_WORDS = ["加载失败", "请求失败", "NaN", "undefined", "[object Object]",
+    "Cannot read", "is not a function", "null is not", "SyntaxError", "TypeError"];
+
+  function probe(doc, win) {
+    var txt = (doc.body && doc.body.innerText) || "";
+    var hits = ERROR_WORDS.filter(function (w) { return txt.indexOf(w) >= 0; });
+    var q = function (s) { try { return doc.querySelectorAll(s).length; } catch (e) { return 0; } };
+    return {
+      textLen: txt.replace(/\s+/g, "").length,
+      rows: q("tbody tr"),
+      cards: q(".stat-card, .card, .kpi, .list-item, .cell, .tile, .grid-item, .record"),
+      tags: q(".tag, .pill, .badge"),
+      empty: q(".empty"),
+      hits: hits,
+      title: (doc.title || "").slice(0, 40),
+      nodes: doc.querySelectorAll("*").length,
+      htmlLen: doc.body ? doc.body.innerHTML.length : 0
+    };
+  }
+
+  var i = 0;
+  function next() {
+    if (i >= PAGES.length) { finish(); return; }
+    var u = PAGES[i++];
+    var fr = document.createElement("iframe");
+    fr.style.cssText = "position:absolute;left:-9999px;top:0;width:1440px;height:1000px;border:0;";
+    fr.src = u + (u.indexOf("?") >= 0 ? "&" : "?") + "mock=reset&smoke=" + Date.now();
+    document.body.appendChild(fr);
+    var done = false;
+    var to = setTimeout(fire, WAIT + 2600);
+    fr.addEventListener("load", function () { setTimeout(fire, WAIT); });
+    function fire() {
+      if (done) return;
+      done = true;
+      clearTimeout(to);
+      var rec = { page: u, ok: false, note: "" };
+      try {
+        var doc = fr.contentDocument;
+        var p = probe(doc, fr.contentWindow);
+        rec.title = p.title;
+        rec.textLen = p.textLen;
+        rec.rows = p.rows;
+        rec.cards = p.cards;
+        rec.tags = p.tags;
+        rec.empty = p.empty;
+        rec.nodes = p.nodes;
+        rec.htmlLen = p.htmlLen;
+        rec.hits = p.hits;
+        rec.ok = p.hits.length === 0 && p.textLen > 40;
+        if (!rec.ok) rec.note = p.hits.length ? ("错误内容：" + p.hits.join(" / ")) : ("页面近乎空白（正文 " + p.textLen + " 字）");
+      } catch (e) {
+        rec.note = "无法读取页面：" + e.message;
+      }
+      rows.push(rec);
+      render();
+      try { fr.remove(); } catch (e) {}
+      setTimeout(next, 60);
+    }
+  }
+
+  function render() {
+    var pass = rows.filter(function (r) { return r.ok; }).length;
+    var fail = rows.length - pass;
+    document.getElementById("kpis").innerHTML =
+      '<div class="kpi"><b>' + rows.length + '</b><span>已测页面</span></div>' +
+      '<div class="kpi"><b class="pass">' + pass + '</b><span>渲染正常</span></div>' +
+      '<div class="kpi"><b class="fail">' + fail + '</b><span>渲染异常</span></div>' +
+      '<div class="kpi"><b>' + PAGES.length + '</b><span>页面总数</span></div>';
+    var html = '<table><thead><tr><th style="width:210px;">页面</th><th style="width:56px;">结果</th>' +
+      '<th style="width:60px;">表格行</th><th style="width:60px;">卡片/条目</th><th style="width:60px;">标签</th>' +
+      '<th style="width:60px;">正文字数</th><th>说明</th></tr></thead><tbody>';
+    rows.forEach(function (r) {
+      html += '<tr><td><code>' + r.page + '</code></td>' +
+        '<td class="' + (r.ok ? 'pass' : 'fail') + '">' + (r.ok ? '通过' : '异常') + '</td>' +
+        '<td>' + (r.rows || 0) + '</td><td>' + (r.cards || 0) + '</td><td>' + (r.tags || 0) + '</td>' +
+        '<td>' + (r.textLen || 0) + '</td><td>' + (r.note || '') + '</td></tr>';
+    });
+    html += '</tbody></table>';
+    document.getElementById("tbl").innerHTML = html;
+  }
+
+  function finish() {
+    var pass = rows.filter(function (r) { return r.ok; }).length;
+    document.getElementById("out").textContent = JSON.stringify({
+      total: rows.length, pass: pass, fail: rows.length - pass, rows: rows
+    });
+    document.title = "DONE " + pass + "/" + rows.length;
+    try { fetch('http://127.0.0.1:8100/save', { method: 'POST', body: document.getElementById('out').textContent }); } catch (e) {}
+  }
+
+  next();
+})();
+</script>
+</body>
+</html>

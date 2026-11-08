@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>我的 · 兰瓶美业</title>
+  <link rel="stylesheet" href="../css/mobile-app.css" />
+  <link rel="stylesheet" href="../assets/css/lp-app.css" />
+  <link rel="stylesheet" href="staff.css" />
+<link rel="stylesheet" href="../assets/css/polish-mobile.css" />
+</head>
+<body>
+  <div class="phone-page">
+    <div class="phone">
+      <div class="status-bar"><span>9:41</span><span>●●●</span></div>
+      <div class="phone-body" id="body">
+        <div class="st-load">加载中…</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../assets/js/lp-api.js"></script>
+  <script src="../assets/js/lp-mock.js?v=47"></script>
+  <script src="staff.js"></script>
+  <script>
+    (function () {
+      'use strict';
+      var user = LP.user() || {}, wb = {};
+
+      STAFF.guard().then(function (me) {
+        user = me || user;
+        STAFF.mountTab('mine');
+        render();
+        return LP.get('/api/workbench').then(function (d) {
+          wb = d || {};
+          if (wb.user) user = wb.user;
+          render();
+        }).catch(function () { });
+      }).catch(function () { });
+
+      function render() {
+        var html = '';
+        html += '<div class="staff-top"><div class="brand">我的</div>' +
+          '<a href="messages.html" style="font-size:16px;">🔔</a></div>';
+
+        html += '<div class="staff-profile" style="padding-bottom:8px;">' +
+          '<div class="av-circle av-letter">' + STAFF.esc(String((u.name || '员')).slice(-2)) + '</div>' +
+          '<div><h2>' + STAFF.esc(user.name || '员工') +
+          (user.level ? '<span class="tiny-tag">' + STAFF.esc(user.level) + '</span>' : '') + '</h2>' +
+          '<p>' + STAFF.esc([user.position, user.store_name].filter(Boolean).join(' · ') || '—') + '</p></div>' +
+          '</div>';
+
+        html += '<div class="stat-grid" style="grid-template-columns:repeat(3,1fr);">' +
+          '<div class="st-cell"><div class="n red">' + STAFF.money(wb.perf || 0) + '</div><div class="l">本月业绩</div></div>' +
+          '<div class="st-cell"><div class="n">' + (wb.verify_count || 0) + '</div><div class="l">核销笔数</div></div>' +
+          '<div class="st-cell"><div class="n">' + (wb.customers || 0) + '</div><div class="l">本店客户</div></div>' +
+          '</div>';
+
+        html += '<div class="form-card" style="padding:4px 16px;margin-bottom:12px;">' +
+          '<div class="kv"><span class="k">手机号</span><span class="v">' + LP.fmt.phone(user.phone) + '</span></div>' +
+          '<div class="kv"><span class="k">所属门店</span><span class="v">' + STAFF.esc(user.store_name || '—') + '</span></div>' +
+          '<div class="kv"><span class="k">角色</span><span class="v">' + STAFF.esc(user.role_name || '员工') + '</span></div>' +
+          '<div class="kv"><span class="k">本月待核销</span><span class="v">' + (wb.pending_verify || 0) + ' 单</span></div>' +
+          '</div>';
+
+        html += '<ul class="set-list">' +
+          '<li><a href="appointment-list.html" style="display:flex;flex:1;justify-content:space-between;align-items:center;">我的预约<span class="arrow">›</span></a></li>' +
+          '<li><a href="clockin.html" style="display:flex;flex:1;justify-content:space-between;align-items:center;">考勤打卡<span class="arrow">›</span></a></li>' +
+          '<li><a href="assessment.html" style="display:flex;flex:1;justify-content:space-between;align-items:center;">我的考核<span class="arrow">›</span></a></li>' +
+          '<li><a href="salary.html" style="display:flex;flex:1;justify-content:space-between;align-items:center;">我的薪资<span class="arrow">›</span></a></li>' +
+          '<li><a href="messages.html" style="display:flex;flex:1;justify-content:space-between;align-items:center;">消息提醒<span class="arrow">›</span></a></li>' +
+          '</ul>';
+
+        html += '<div style="padding:20px 16px 8px;">' +
+          '<button class="logout-btn" id="logoutBtn">退出登录</button></div>';
+        html += '<div class="st-muted st-center" style="padding:6px 0 20px;">兰瓶美业连锁管理系统 · 员工端</div>';
+
+        STAFF.body().innerHTML = html;
+        LP.$('#logoutBtn').addEventListener('click', function () {
+          LP.confirm('确定退出登录？', { okText: '退出' }).then(function (ok) {
+            if (ok) LP.logout();
+          });
+        });
+      }
+    })();
+  </script>
+</body>
+</html>

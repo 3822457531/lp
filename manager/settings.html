@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>设置 · 兰瓶美业</title>
+  <link rel="stylesheet" href="../css/mobile-app.css" />
+  <link rel="stylesheet" href="../assets/css/lp-app.css" />
+  <style>
+    .switch-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 48px; }
+    .switch-row span.lbl { font-size: 14px; }
+    .switch { width: 46px; height: 26px; border-radius: 14px; background: #dcdfe6; position: relative; transition: .2s; flex: 0 0 auto; cursor: pointer; }
+    .switch::after { content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: .2s; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
+    .switch.on { background: var(--pink); }
+    .switch.on::after { left: 23px; }
+    .ro-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 44px; border-bottom: 1px solid var(--border); font-size: 13px; }
+    .ro-row:last-child { border-bottom: none; }
+    .ro-row em { font-style: normal; color: var(--text-2); text-align: right; word-break: break-word; }
+    .tip-box { margin: 10px 14px 4px; padding: 10px 12px; border-radius: 10px; background: #fff8f0; color: #a06a1e; font-size: 12px; line-height: 1.6; }
+    .form-card .btn-block { width: calc(100% - 32px); }
+  </style>
+<link rel="stylesheet" href="../assets/css/polish-mobile.css" />
+</head>
+<body>
+  <div class="phone-page">
+    <div class="phone">
+      <div class="status-bar" style="background:#f8a0b4;color:#fff;"><span>9:41</span><span>兰瓶</span><span>●●●</span></div>
+      <div class="phone-body">
+        <div class="nav-bar">
+          <a class="back" href="home.html">‹</a>
+          <h1>设置</h1>
+          <span class="right" id="refresh">↻</span>
+        </div>
+
+        <div class="section-hd">生日提醒 <span id="storeHint"></span></div>
+        <div class="form-card">
+          <div class="form-row">
+            <div class="switch-row" style="width:100%">
+              <span class="lbl">生日提醒开关</span>
+              <span class="switch" id="bdSwitch"></span>
+            </div>
+          </div>
+          <div class="form-row">
+            <label>提前提醒天数</label>
+            <input id="bdDays" type="number" min="0" max="60" step="1" placeholder="如 7" style="width:100%;height:40px;border:1px solid var(--border);border-radius:10px;padding:0 10px;font-size:14px;background:#fff;color:var(--text);" />
+          </div>
+          <div class="form-area" style="padding:0 0 10px;font-size:12px;color:var(--text-2);line-height:1.6;">
+            开启后，工作台会提前展示生日客户，便于发送祝福与到店邀约。
+          </div>
+          <button class="btn-block" id="saveBtn">保存设置</button>
+        </div>
+
+        <div class="tip-box">以下为总部统一配置，门店端仅可查看。</div>
+        <div class="section-hd">其他配置（只读）</div>
+        <div class="list-card" id="readonly">
+          <div class="lp-skeleton"><div></div><div></div><div></div></div>
+        </div>
+      </div>
+
+      <nav class="tab-bar">
+        <a href="home.html"><span class="dot"></span>首页</a>
+        <a href="customers.html"><span class="dot"></span>客户</a>
+        <a href="verify.html"><span class="dot"></span>核销</a>
+        <a href="mine.html"><span class="dot"></span>我的</a>
+      </nav>
+    </div>
+  </div>
+
+  <script src="../assets/js/lp-api.js"></script>
+  <script src="../assets/js/lp-mock.js?v=47"></script>
+  <script>
+    (function () {
+      'use strict';
+      var me = null;
+      var cur = {};
+      var switchEl = document.getElementById('bdSwitch');
+
+      function onOff(v) { return String(v) === '1' || v === 1 || v === true; }
+
+      function paint() {
+        switchEl.classList.toggle('on', onOff(cur.birthday_switch));
+        document.getElementById('bdDays').value = cur.birthday_remind_days === undefined ? '' : cur.birthday_remind_days;
+        document.getElementById('storeHint').textContent = (me && me.store_name) || '';
+        var rows = [
+          ['打卡模式', cur.clock_mode || '—'],
+          ['上班时间', cur.work_start || '—'],
+          ['下班时间', cur.work_end || '—'],
+          ['迟到容差', cur.late_tolerance ? cur.late_tolerance + ' 分钟' : '—'],
+          ['打卡方式', cur.clock_methods || '—'],
+          ['门店 WiFi', cur.wifi_name || '—'],
+          ['定位半径', cur.geo_radius ? cur.geo_radius + ' 米' : '—'],
+          ['核销码有效期', cur.verify_code_ttl ? cur.verify_code_ttl + ' 秒' : '—'],
+          ['工资锁定日', cur.salary_lock_day ? '每月 ' + cur.salary_lock_day + ' 日' : '—'],
+          ['短信开关', onOff(cur.sms_switch) ? '开启' : '关闭'],
+          ['短信签名', cur.sms_sign || '—']
+        ];
+        document.getElementById('readonly').innerHTML = rows.map(function (r) {
+          return '<div class="ro-row"><span>' + LP.esc(r[0]) + '</span><em>' + LP.esc(r[1]) + '</em></div>';
+        }).join('');
+      }
+
+      function load() {
+        return LP.get('/api/settings').then(function (s) {
+          cur = s || {};
+          paint();
+        }).catch(function (e) {
+          document.getElementById('readonly').innerHTML = LP.empty('设置加载失败', '⚠');
+          LP.toast(e.message || '加载失败', 'error');
+        });
+      }
+
+      switchEl.addEventListener('click', function () {
+        switchEl.classList.toggle('on');
+      });
+
+      document.getElementById('saveBtn').addEventListener('click', function () {
+        var days = document.getElementById('bdDays').value;
+        var n = Number(days);
+        if (days === '' || isNaN(n) || n < 0 || n > 60) { LP.toast('提醒天数需在 0~60 之间', 'error'); return; }
+        var btn = this;
+        btn.disabled = true;
+        LP.put('/api/settings', {
+          birthday_switch: switchEl.classList.contains('on') ? 1 : 0,
+          birthday_remind_days: n
+        }).then(function () {
+          LP.toast('设置已保存', 'success');
+          return load();
+        }).catch(function (e) {
+          LP.toast(e.message || '保存失败', 'error');
+        }).then(function () { btn.disabled = false; });
+      });
+
+      document.getElementById('refresh').addEventListener('click', load);
+
+      LP.requireRoles(['manager']).then(function (u) { me = u; load(); }).catch(function () {});
+    })();
+  </script>
+</body>
+</html>

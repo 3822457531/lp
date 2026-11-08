@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>核销列表 · 兰瓶美业</title>
+  <link rel="stylesheet" href="../css/mobile-app.css" />
+  <link rel="stylesheet" href="../assets/css/lp-app.css" />
+  <style>
+    .search-box input { width: 100%; background: transparent; font-size: 13px; height: 100%; border: none; outline: none; color: var(--text); }
+    .list-card .info p { margin: 2px 0; word-break: break-word; }
+    .list-card .info p b { color: var(--text); font-weight: 600; }
+    .list-card .info h4 .price { margin-left: auto; font-size: 15px; }
+    .list-card .actions .btn-sm { min-height: 34px; line-height: 32px; padding: 0 14px; }
+    .list-card .code { font-family: ui-monospace, Menlo, Consolas, monospace; letter-spacing: .5px; }
+  </style>
+<link rel="stylesheet" href="../assets/css/polish-mobile.css" />
+</head>
+<body>
+  <div class="phone-page">
+    <div class="phone">
+      <div class="status-bar" style="background:#f8a0b4;color:#fff;"><span>9:41</span><span>兰瓶</span><span>●●●</span></div>
+      <div class="phone-body">
+        <div class="nav-bar">
+          <a class="back" href="home.html">‹</a>
+          <h1>核销列表</h1>
+          <span class="right" id="refresh">↻</span>
+        </div>
+
+        <div class="search-row">
+          <div class="search-box"><input id="q" type="search" placeholder="搜索客户 / 员工 / 项目" /></div>
+        </div>
+
+        <div class="tabs-row" id="statusTabs">
+          <span class="active" data-status="">全部</span>
+          <span data-status="待核销">待核销</span>
+          <span data-status="已完成">已完成</span>
+          <span data-status="已冲正">已冲正</span>
+          <span data-status="已取消">已取消</span>
+        </div>
+
+        <div class="section-hd">核销单 <span id="countHint">—</span></div>
+        <div id="list" style="padding-bottom:8px;"></div>
+      </div>
+
+      <nav class="tab-bar">
+        <a href="home.html"><span class="dot"></span>首页</a>
+        <a href="customers.html"><span class="dot"></span>客户</a>
+        <a class="active" href="verify.html"><span class="dot"></span>核销</a>
+        <a href="mine.html"><span class="dot"></span>我的</a>
+      </nav>
+    </div>
+  </div>
+
+  <script src="../assets/js/lp-api.js"></script>
+  <script src="../assets/js/lp-mock.js?v=47"></script>
+  <script>
+    (function () {
+      'use strict';
+      var status = '';
+      var raw = [];
+      var listEl = document.getElementById('list');
+
+      function itemNames(v) {
+        var its = v.items;
+        if (typeof its === 'string') { try { its = JSON.parse(its); } catch (e) { its = []; } }
+        if (!its || !its.length) return v.project_name || '—';
+        return its.map(function (i) { return (i.name || '项目') + ' ×' + (i.times || 1); }).join('、');
+      }
+      function totalTimes(v) {
+        var its = v.items;
+        if (typeof its === 'string') { try { its = JSON.parse(its); } catch (e) { its = []; } }
+        if (!its || !its.length) return 1;
+        return its.reduce(function (s, i) { return s + Number(i.times || 1); }, 0);
+      }
+
+      function cardHtml(v) {
+        var acts = '';
+        if (v.status === '待核销') {
+          acts = '<button class="btn-sm ghost danger" data-cancel="' + v.id + '">取消核销</button>';
+        } else if (v.status === '已完成') {
+          acts = '<button class="btn-sm solid" data-refund="' + v.id + '">补退</button>';
+        }
+        return '<div class="list-card">' +
+          '<div class="info"><h4>' + LP.esc(v.customer_name || '—') + LP.tag(v.status || '') +
+          '<span class="price">' + LP.esc(LP.fmt.money(v.total_amount || v.amount || 0)) + '</span></h4>' +
+          '<p>项目：<b>' + LP.esc(itemNames(v)) + '</b> · 共 ' + LP.esc(LP.fmt.num(v.total_times || totalTimes(v))) + ' 次</p>' +
+          '<p>员工：' + LP.esc(v.staff_name || '—') + ' · 门店：' + LP.esc(v.store_name || '—') + '</p>' +
+          '<p>时间：' + LP.esc(LP.fmt.datetime(v.confirmed_at || v.created_at)) + '</p>' +
+          '<p>手机：' + LP.esc(LP.fmt.phone(v.customer_phone)) +
+          (v.code ? ' · 核销码 <span class="code">' + LP.esc(v.code) + '</span>' : '') + '</p>' +
+          (v.source ? '<p>来源：' + LP.esc(v.source) + '</p>' : '') +
+          (v.welfare_discount ? '<p>公益折扣：' + LP.esc(LP.fmt.money(v.welfare_discount)) + '</p>' : '') +
+          '</div>' + (acts ? '<div class="actions">' + acts + '</div>' : '') + '</div>';
+      }
+
+      function paint() {
+        var q = document.getElementById('q').value.trim();
+        var rows = raw;
+        if (q) {
+          rows = rows.filter(function (v) {
+            return [v.customer_name, v.customer_phone, v.staff_name, itemNames(v)].join(' ').indexOf(q) >= 0;
+          });
+        }
+        document.getElementById('countHint').textContent = rows.length + ' 单';
+        if (!rows.length) { listEl.innerHTML = LP.empty('暂无核销单'); return; }
+        listEl.innerHTML = rows.map(cardHtml).join('');
+      }
+
+      function load() {
+        listEl.innerHTML = LP.skeleton(3);
+        var qs = {};
+        if (status) qs.status = status;
+        LP.get('/api/verifications', qs).then(function (arr) {
+          raw = arr || [];
+          paint();
+        }).catch(function (e) {
+          listEl.innerHTML = LP.empty('核销单加载失败', '⚠');
+          LP.toast(e.message || '加载失败', 'error');
+        });
+      }
+
+      function doCancel(id) {
+        LP.formModal({
+          title: '取消核销',
+          okText: '确认取消',
+          schema: [{ name: 'reason', label: '取消原因', type: 'textarea', rows: 2, value: '客户临时取消', required: true, full: true }],
+          onSubmit: function (out) {
+            return LP.post('/api/verifications/' + id + '/cancel', { reason: out.reason }).then(function () {
+              LP.toast('已取消该核销', 'success');
+              load();
+            });
+          }
+        });
+      }
+
+      function doRefund(id) {
+        var v = raw.filter(function (x) { return String(x.id) === String(id); })[0] || {};
+        var max = totalTimes(v);
+        LP.formModal({
+          title: '核销补退',
+          okText: '确认补退',
+          desc: '补退会把次数退回客户卡项，并将该核销单置为「已冲正」。',
+          schema: [
+            { name: 'times', label: '补退次数', type: 'number', step: '1', value: 1, required: true, hint: '本单共 ' + max + ' 次' },
+            { name: 'reason', label: '补退原因', type: 'textarea', rows: 2, value: '客户投诉退款', required: true, full: true }
+          ],
+          onSubmit: function (out) {
+            var t = Number(out.times);
+            if (!t || t < 1) throw new Error('补退次数需 ≥ 1');
+            if (t > max) throw new Error('补退次数不能超过本单次数 ' + max);
+            return LP.post('/api/verifications/' + id + '/refund', { times: t, reason: out.reason }).then(function (r) {
+              LP.toast('已补退 ' + ((r && r.refunded) || t) + ' 次', 'success');
+              load();
+            });
+          }
+        });
+      }
+
+      listEl.addEventListener('click', function (e) {
+        var c = e.target.closest('[data-cancel]');
+        var r = e.target.closest('[data-refund]');
+        if (c) doCancel(c.getAttribute('data-cancel'));
+        else if (r) doRefund(r.getAttribute('data-refund'));
+      });
+
+      document.getElementById('q').addEventListener('input', LP.debounce(paint, 250));
+      document.getElementById('refresh').addEventListener('click', load);
+
+      document.getElementById('statusTabs').addEventListener('click', function (e) {
+        var s = e.target.closest('span[data-status]');
+        if (!s) return;
+        LP.$$('#statusTabs span').forEach(function (x) { x.classList.remove('active'); });
+        s.classList.add('active');
+        status = s.getAttribute('data-status') || '';
+        load();
+      });
+
+      LP.requireRoles(['manager']).then(function () {
+        var want = LP.param('status');
+        if (want) {
+          var hit = LP.$$('#statusTabs span').filter(function (x) { return x.getAttribute('data-status') === want; })[0];
+          if (hit) {
+            LP.$$('#statusTabs span').forEach(function (x) { x.classList.remove('active'); });
+            hit.classList.add('active');
+            status = want;
+          }
+        }
+        load();
+      }).catch(function () {});
+    })();
+  </script>
+</body>
+</html>

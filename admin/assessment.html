@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>考核设置 · 兰瓶管理后台</title>
+  <link rel="stylesheet" href="css/admin.css" />
+  <link rel="stylesheet" href="../assets/css/lp-app.css" />
+  <link rel="stylesheet" href="../assets/css/polish.css" />
+</head>
+<body data-page="assessment">
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <div class="main">
+      <header class="topbar">
+        <div class="topbar-title">考核设置 <span>考核项模板、员工考核与达标记录</span></div>
+        <div class="topbar-actions" id="top-user"></div>
+      </header>
+      <div class="content">
+        <div class="panel">
+          <div class="panel-hd">
+            <h3>考核模板</h3>
+            <button class="btn" id="btn-new">+ 新增考核项</button>
+          </div>
+          <div class="panel-bd">
+            <div class="toolbar">
+              <select class="field" id="f-store" style="width:160px;"><option value="">全部门店</option></select>
+              <select class="field" id="f-type" style="width:150px;">
+                <option value="">全部类型</option>
+                <option value="月度作业">月度作业</option>
+                <option value="季度考核">季度考核</option>
+              </select>
+              <select class="field" id="f-status" style="width:140px;">
+                <option value="">全部状态</option>
+                <option value="启用">启用</option>
+                <option value="停用">停用</option>
+              </select>
+              <button class="btn ghost" id="btn-search">查询</button>
+            </div>
+          </div>
+          <div class="lp-scroll-x" id="list"></div>
+          <div class="pagination" id="count"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-hd"><h3>员工考核结果</h3><span style="font-size:12px;color:#9aa3b2;">当月达标情况</span></div>
+          <div class="lp-scroll-x" id="result"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../assets/js/lp-api.js"></script>
+  <script src="../assets/js/lp-mock.js?v=47"></script>
+  <script src="js/layout.js"></script>
+  <script>
+  (function () {
+    'use strict';
+    var ROWS = [];
+    var STORES = [];
+
+    function err(e) { LP.toast((e && e.message) || '操作失败', 'error'); }
+
+    function renderList() {
+      var type = document.getElementById('f-type').value;
+      var status = document.getElementById('f-status').value;
+      var rows = ROWS.filter(function (r) {
+        if (type && r.type !== type) return false;
+        if (status && r.status !== status) return false;
+        return true;
+      });
+      LP.mount('#list', LP.table({
+        columns: [
+          { title: '考核项', render: function (r) { return '<b style="font-weight:600;">' + LP.esc(r.name || '—') + '</b>'; } },
+          { title: '所属门店', render: function (r) { return LP.esc(r.store_name || '全部门店'); } },
+          { title: '类型', render: function (r) { return LP.esc(r.type || '月度作业'); } },
+          { title: '目标值', render: function (r) { return LP.esc(String(r.target || '—')) + (r.unit ? ' ' + LP.esc(r.unit) : ''); } },
+          { title: '权重', render: function (r) { return LP.fmt.num(r.weight || 0) + '%'; } },
+          { title: '状态', render: function (r) {
+              return r.status === '停用' ? '<span class="tag tag-gray">停用</span>' : '<span class="tag tag-green">启用</span>';
+          }},
+          { title: '操作', render: function (r) {
+              return '<span class="ops"><a class="btn-link" data-act="edit" data-id="' + r.id + '">编辑</a>' +
+                '<a class="btn-link danger" data-act="del" data-id="' + r.id + '">删除</a></span>';
+          }}
+        ],
+        rows: rows,
+        emptyText: '暂无考核项'
+      }));
+      LP.mount('#count', '<span>共 ' + rows.length + ' 个考核项</span>');
+    }
+
+    function load() {
+      LP.mount('#list', '<div style="padding:18px;">' + LP.skeleton(5) + '</div>');
+      LP.get('/api/assessments', { store_id: document.getElementById('f-store').value }).then(function (d) {
+        ROWS = (d && d.list) || d || [];
+        renderList();
+      }).catch(function (e) {
+        err(e);
+        LP.mount('#list', LP.empty('考核数据加载失败'));
+      });
+
+      LP.get('/api/assessments/result').then(function (d) {
+        var rows = (d && d.list) || d || [];
+        LP.mount('#result', LP.table({
+          columns: [
+            { title: '员工', render: function (r) { return LP.esc(r.staff_name || r.user_name || '—'); } },
+            { title: '门店', render: function (r) { return LP.esc(r.store_name || '—'); } },
+            { title: '考核项', render: function (r) { return LP.esc(r.name || r.item_name || '—'); } },
+            { title: '目标', render: function (r) { return LP.esc(String(r.target || '—')); } },
+            { title: '实际', render: function (r) { return LP.esc(String(r.actual || '—')); } },
+            { title: '达成率', cls: 'price', render: function (r) { return LP.fmt.pct(r.percent || 0, 0); } },
+            { title: '结果', render: function (r) {
+                return r.qualified ? '<span class="tag tag-green">达标</span>' : '<span class="tag tag-red">未达标</span>';
+            }}
+          ],
+          rows: rows,
+          emptyText: '暂无考核结果'
+        }));
+      }).catch(function () {});
+    }
+
+    function openForm(row) {
+      row = row || {};
+      var editing = !!row.id;
+      LP.formModal({
+        title: editing ? '编辑考核项' : '新增考核项',
+        okText: editing ? '保存' : '创建',
+        fields: [
+          { name: 'name', label: '考核项名称', required: true, value: row.name || '' },
+          { name: 'store_id', label: '所属门店', type: 'select', options:
+              [{ value: '', label: '全部门店' }].concat(STORES.map(function (s) { return { value: s.id, label: s.name }; })),
+            value: row.store_id || '' },
+          { name: 'type', label: '类型', type: 'select', options: [{ value: '月度作业', label: '月度作业' }, { value: '季度考核', label: '季度考核' }], value: row.type || '月度作业' },
+          { name: 'target', label: '目标值', value: row.target || '' },
+          { name: 'unit', label: '单位', placeholder: '元 / 次 / 分', value: row.unit || '' },
+          { name: 'weight', label: '权重（%）', type: 'number', value: row.weight === undefined ? 20 : row.weight },
+          { name: 'status', label: '状态', type: 'select', options: [{ value: '启用', label: '启用' }, { value: '停用', label: '停用' }], value: row.status || '启用' }
+        ],
+        onSubmit: function (out) {
+          var body = {
+            name: out.name, store_id: out.store_id || null, type: out.type,
+            target: out.target, unit: out.unit, weight: Number(out.weight) || 0, status: out.status
+          };
+          var p = editing ? LP.put('/api/assessments/' + row.id, body) : LP.post('/api/assessments', body);
+          return p.then(function () {
+            LP.toast(editing ? '已保存' : '已创建', 'success');
+            load();
+          });
+        }
+      });
+    }
+
+    function del(id) {
+      var r = ROWS.filter(function (x) { return String(x.id) === String(id); })[0] || {};
+      LP.confirm('确定删除考核项「' + (r.name || '') + '」？', { danger: true, okText: '删除' }).then(function (ok) {
+        if (!ok) return;
+        LP.del('/api/assessments/' + id).then(function () {
+          LP.toast('已删除', 'success');
+          load();
+        }).catch(err);
+      }).catch(err);
+    }
+
+    function init(me) {
+      document.dispatchEvent(new CustomEvent('lp:user', { detail: me }));
+      LP.get('/api/stores').then(function (list) {
+        STORES = (list || []).filter(function (s) { return s.status !== '停业'; });
+        document.getElementById('f-store').innerHTML = '<option value="">全部门店</option>' + STORES.map(function (s) {
+          return '<option value="' + s.id + '">' + LP.esc(s.name) + '</option>';
+        }).join('');
+      }).catch(err).then(load);
+
+      document.getElementById('btn-search').addEventListener('click', load);
+      document.getElementById('f-store').addEventListener('change', load);
+      document.getElementById('f-type').addEventListener('change', renderList);
+      document.getElementById('f-status').addEventListener('change', renderList);
+      document.getElementById('btn-new').addEventListener('click', function () { openForm(null); });
+      LP.on(document, 'click', '[data-act="edit"]', function (e, t) {
+        var id = t.getAttribute('data-id');
+        openForm(ROWS.filter(function (r) { return String(r.id) === String(id); })[0] || { id: id });
+      });
+      LP.on(document, 'click', '[data-act="del"]', function (e, t) { del(t.getAttribute('data-id')); });
+    }
+
+    LP.requireRoles(['admin']).then(init).catch(function () {});
+  })();
+  </script>
+</body>
+</html>
